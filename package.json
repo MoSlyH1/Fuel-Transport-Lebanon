@@ -1,0 +1,16 @@
+{
+  "name": "fuel-transport",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Official IPT fuel prices + fuel-indexed daily transportation rate (Node.js, vanilla JS, PostgreSQL).",
+  "main": "server.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

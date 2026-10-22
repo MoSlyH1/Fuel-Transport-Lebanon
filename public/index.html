@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Fuel &amp; Transport Calculator</title>
+  <meta name="description" content="Official IPT fuel prices in Lebanon and the fuel-indexed daily transportation rate, month by month.">
+  <meta name="theme-color" content="#1f5f3a">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap top-in">
+      <div class="brand">
+        <img src="/favicon.svg" alt="" width="36" height="36">
+        <div>
+          <h1>Fuel &amp; Transport</h1>
+          <p>Lebanon · official IPT prices</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <span class="badge" id="badge" role="status"><i class="dot"></i><span id="badgeText">Loading…</span></span>
+        <button class="btn" id="updateBtn" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="updateText">Update from IPT</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="alert" id="error" hidden>
+      <span id="errorText"></span>
+      <button class="btn small" id="retryBtn" type="button">Try again</button>
+    </div>
+
+    <!-- ============ fuel prices ============ -->
+    <section aria-labelledby="h-prices">
+      <div class="sec-head">
+        <h2 id="h-prices">Fuel prices today</h2>
+        <p class="muted" id="pricesSub">&nbsp;</p>
+      </div>
+      <div class="fuel-grid" id="fuelGrid" aria-live="polite">
+        <div class="card fuel skeleton"></div><div class="card fuel skeleton"></div>
+        <div class="card fuel skeleton"></div><div class="card fuel skeleton"></div>
+      </div>
+    </section>
+
+    <!-- ============ daily rate + transportation ============ -->
+    <section id="calc" aria-labelledby="h-calc">
+      <div class="sec-head">
+        <h2 id="h-calc">Daily rate &amp; transportation</h2>
+        <p class="muted">5 litres of UNL 95 per working day, averaged over the pay month.</p>
+      </div>
+
+      <form class="controls" id="controls" autocomplete="off">
+        <label class="field">
+          <span>Pay month <small>prices averaged over</small></span>
+          <select id="month"></select>
+        </label>
+        <label class="field">
+          <span>Days worked <small>26 = full month</small></span>
+          <input id="days" type="number" inputmode="numeric" min="0" max="31" step="1" value="26">
+        </label>
+        <label class="field">
+          <span>Employees</span>
+          <input id="employees" type="number" inputmode="numeric" min="1" max="9999" step="1" value="1">
+        </label>
+      </form>
+
+      <article class="card result" id="result" aria-live="polite">
+        <p class="eyebrow" id="eyebrow">DAILY RATE · FUEL-INDEXED</p>
+        <p class="big"><span id="rate">—</span> <small>L.L. / day</small></p>
+        <p class="muted" id="rateSub">&nbsp;</p>
+
+        <div class="meter" id="meter">
+          <div class="track"><i class="marker" id="marker"></i></div>
+          <div class="meter-labels">
+            <span class="mono" id="minLabel">500,000</span>
+            <b id="limitText">within limits</b>
+            <span class="mono" id="maxLabel">800,000</span>
+          </div>
+        </div>
+
+        <div class="payslip">
+          <div class="pay-row">
+            <span id="payLabel">On the payslip</span>
+            <b class="mono" id="payLine">—</b>
+          </div>
+          <div class="pay-row old">
+            <span>Old terms (450,000 / day)</span>
+            <span class="mono" id="oldLine">—</span>
+          </div>
+        </div>
+
+        <details class="how" id="how" open>
+          <summary>How this rate was calculated</summary>
+          <div id="howBody"></div>
+        </details>
+        <p class="foot-note">Prices are only used to set the rate — they are not printed on the payslip.</p>
+      </article>
+    </section>
+
+    <!-- ============ month by month ============ -->
+    <section aria-labelledby="h-months">
+      <div class="sec-head">
+        <h2 id="h-months">Month by month</h2>
+        <p class="muted" id="monthsSub">Tap a month to see its calculation.</p>
+      </div>
+      <div class="card table-card">
+        <table class="grid" id="monthsTable">
+          <thead>
+            <tr><th>Month</th><th class="num">Avg / 20 L</th><th class="num">Per day</th><th class="num" id="thTotal">Transport</th></tr>
+          </thead>
+          <tbody id="monthsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Source: <a id="srcLink" href="https://www.iptgroup.com.lb/ipt/en/our-stations/fuel-prices" target="_blank" rel="noopener">IPT Group — weekly fuel prices</a>.
+       <span id="checked"></span></p>
+    <p class="muted">Terms: until Sep 2026 a fixed 450,000 L.L. per day · from Oct 2026 indexed to fuel, between 500,000 and 800,000 L.L. per day.</p>
+  </footer>
+
+  <noscript><p class="wrap">This page needs JavaScript to calculate.</p></noscript>
+  <script src="/app.js" defer></script>
+</body>
+</html>

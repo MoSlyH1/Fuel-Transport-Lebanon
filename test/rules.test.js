@@ -1,0 +1,100 @@
+"use strict";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { SEED } = require("../lib/history");
+const R = require("../lib/rules");
+
+const tables = SEED.map(([date, unl95]) => ({ date, unl95 }));
+
+test("October 2026 to date (22 Oct) matches the reference screenshot", () => {
+  const c = R.calculateMonth("2026-10", tables, "2026-10-22");
+  assert.equal(c.status, "partial");
+  assert.equal(c.days, 22);
+  assert.deepEqual(c.segments.map((s) => [s.from, s.to, s.days, s.unl95]), [
+    ["2026-10-01", "2026-10-01", 1, 2_844_000],
+    ["2026-10-02", "2026-10-05", 4, 2_837_000],
+    ["2026-10-06", "2026-10-08", 3, 2_825_000],
+    ["2026-10-09", "2026-10-12", 4, 2_802_000],
+    ["2026-10-13", "2026-10-15", 3, 2_795_000],
+    ["2026-10-16", "2026-10-19", 4, 2_773_000],
+    ["2026-10-20", "2026-10-22", 3, 2_739_000],
+  ]);
+  assert.equal(Math.round(c.avgQuote20L), 2_798_591);
+  assert.equal(Math.round(c.avgPerLitre), 139_930);
+  assert.equal(Math.round(c.rawPerDay), 699_648);
+  assert.equal(c.ratePerDay, 700_000);
+  assert.equal(c.clamped, null);
+  const p = R.payslipLine(c.ratePerDay, 26);
+  assert.equal(p.total, 18_200_000);
+  assert.equal(p.oldTotal, 11_700_000);
+  assert.equal(p.differenceVsOld, 6_500_000);
+});
+
+test("segment days always add up to the days averaged", () => {
+  const c = R.calculateMonth("2026-10", tables, "2026-10-22");
+  assert.equal(c.segments.reduce((a, s) => a + s.days, 0), c.days);
+  assert.equal(c.segments.reduce((a, s) => a + s.days * s.unl95, 0), c.sumQuoteDays);
+});
+
+test("a finished month averages every calendar day, including a mid-month price change", () => {
+  const t = [{ date: "2026-10-01", unl95: 2_800_000 }, { date: "2026-10-11", unl95: 3_000_000 }];
+  const c = R.calculateMonth("2026-10", t, "2026-11-05");
+  assert.equal(c.status, "complete");
+  assert.equal(c.days, 31);
+  assert.deepEqual(c.segments.map((s) => s.days), [10, 21]);
+  assert.equal(c.avgQuote20L, (2_800_000 * 10 + 3_000_000 * 21) / 31);
+});
+
+test("price in force before the month starts carries into day 1", () => {
+  const t = [{ date: "2026-09-29", unl95: 2_844_000 }, { date: "2026-10-02", unl95: 2_837_000 }];
+  const c = R.calculateMonth("2026-10", t, "2026-10-03");
+  assert.equal(c.segments[0].tableDate, "2026-09-29");
+  assert.equal(c.segments[0].days, 1);
+});
+
+test("floor of 500,000 and cap of 800,000 apply", () => {
+  const low = R.rateFromAverageQuote(1_800_000);   // 450,000 raw
+  assert.equal(low.ratePerDay, 500_000);
+  assert.equal(low.clamped, "min");
+  const high = R.rateFromAverageQuote(3_400_000);  // 850,000 raw
+  assert.equal(high.ratePerDay, 800_000);
+  assert.equal(high.clamped, "max");
+  assert.equal(R.rateFromAverageQuote(2_800_000).ratePerDay, 700_000);
+});
+
+test("rounds to the nearest 1,000 (half rounds up)", () => {
+  assert.equal(R.rateFromAverageQuote(2_738_000).ratePerDay, 685_000); // 684,500
+  assert.equal(R.rateFromAverageQuote(2_739_000).ratePerDay, 685_000); // 684,750
+  assert.equal(R.rateFromAverageQuote(2_737_000).ratePerDay, 684_000); // 684,250
+});
+
+test("future month = estimate from the latest price; days are not invented", () => {
+  const c = R.calculateMonth("2026-12", tables, "2026-10-22");
+  assert.equal(c.status, "future");
+  assert.equal(c.days, 1);
+  assert.equal(c.segments[0].unl95, 2_739_000);
+  assert.equal(c.ratePerDay, 685_000);
+});
+
+test("months before October 2026 use the old fixed 450,000", () => {
+  const c = R.calculateMonth("2026-09", tables, "2026-10-22");
+  assert.equal(c.legacy, true);
+  assert.equal(c.ratePerDay, 450_000);
+});
+
+test("date helpers", () => {
+  assert.equal(R.lastOfMonth(2026, 2), "2026-02-28");
+  assert.equal(R.lastOfMonth(2028, 2), "2028-02-29");
+  assert.equal(R.addMonths("2026-12", 1), "2027-01");
+  assert.equal(R.addMonths("2026-10", 3), "2027-01");
+  assert.equal(R.monthLabel("2026-10"), "October 2026");
+  assert.ok(R.isMonth("2026-10") && !R.isMonth("2026-13") && !R.isMonth("2026-1"));
+  assert.throws(() => R.calculateMonth("nope", tables, "2026-10-22"), RangeError);
+});
+
+test("employees multiply the payslip line", () => {
+  const p = R.payslipLine(700_000, 26, 3);
+  assert.equal(p.total, 54_600_000);
+  assert.equal(p.differenceVsOld, 19_500_000);
+  assert.equal(R.payslipLine(700_000, 0, 1).total, 0);
+});

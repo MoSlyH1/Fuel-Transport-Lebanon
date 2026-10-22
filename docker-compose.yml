@@ -1,0 +1,35 @@
+# docker compose up --build      →  http://localhost:3000
+#
+#   db  — PostgreSQL 16. db/schema.sql creates the tables on first start.
+#   web — Node server: the page, the API, and a 30-minute IPT re-read.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fuel
+      POSTGRES_PASSWORD: fuel
+      POSTGRES_DB: fuel
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuel -d fuel"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build: .
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgresql://fuel:fuel@db:5432/fuel
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:

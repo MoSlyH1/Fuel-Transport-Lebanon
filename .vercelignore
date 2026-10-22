@@ -1,0 +1,5 @@
+test
+db
+Dockerfile
+docker-compose.yml
+.dockerignore
