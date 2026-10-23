@@ -28,8 +28,9 @@ const get = async (p, init) => { const r = await fetch(base + p, init); return {
 test("summary: prices, rate, payslip and months", async () => {
   const { r, j } = await get("/api/summary?month=2026-10&days=26");
   assert.equal(r.status, 200);
-  assert.equal(j.rate.ratePerDay, 700_000);
-  assert.equal(j.payslip.total, 18_200_000);
+  assert.equal(j.rate.fuelRatePerDay, 685_000);
+  assert.equal(j.rate.ratePerDay, 525_806); // 21 days at 450,000 + 10 days at 685,000
+  assert.equal(j.payslip.total, 13_670_956);
   const f = Object.fromEntries(j.prices.fuels.map((x) => [x.key, x]));
   assert.equal(f.unl95.price, 2_739_000);
   assert.equal(f.unl98.price, 2_757_000);
@@ -48,7 +49,7 @@ test("default month is the current month", async () => {
 
 test("rate endpoint accepts employees", async () => {
   const { j } = await get("/api/rate?month=2026-10&days=20&employees=3");
-  assert.equal(j.payslip.total, 20 * 700_000 * 3);
+  assert.equal(j.payslip.total, 20 * 525_806 * 3);
 });
 
 test("bad input is rejected with 400", async () => {

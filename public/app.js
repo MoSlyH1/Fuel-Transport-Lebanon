@@ -135,21 +135,23 @@
 
   function renderRate() {
     const { rate: r, rule } = state.data;
-    $("eyebrow").textContent = r.legacy ? "DAILY RATE · OLD TERMS (FIXED)" : "DAILY RATE · FUEL-INDEXED";
+    $("eyebrow").textContent = r.legacy ? "DAILY RATE · OLD TERMS (FIXED)" : r.mixed ? "DAILY RATE · OLD + FUEL-INDEXED" : "DAILY RATE · FUEL-INDEXED";
     $("rate").textContent = fmt(r.ratePerDay);
 
     if (r.legacy) {
-      $("rateSub").textContent = `Before October 2026 the rate was a fixed ${fmt(rule.legacyPerDay)} L.L. per day.`;
+      $("rateSub").textContent = `Before 22 October 2026 the rate was a fixed ${fmt(rule.legacyPerDay)} L.L. per day.`;
     } else {
       const suffix = r.status === "partial" ? " (to date)" : r.status === "future" ? " (estimate from the latest price)" : "";
-      $("rateSub").textContent = `${rule.litresPerDay} L/day at the average official fuel price · ${rangeLabel(r.averagedFrom, r.averagedTo)}${suffix}`;
+      $("rateSub").textContent = r.mixed
+        ? `${r.oldDays} days at ${fmt(rule.legacyPerDay)} + ${r.newDays} days at ${fmt(r.fuelRatePerDay)} (fuel average ${rangeLabel(r.averagedFrom, r.averagedTo)})${suffix}`
+        : `${rule.litresPerDay} L/day at the average official fuel price · ${rangeLabel(r.averagedFrom, r.averagedTo)}${suffix}`;
     }
 
-    // meter
+    // meter (the 500K–800K limits apply to the fuel rate)
     $("meter").hidden = r.legacy;
     $("minLabel").textContent = fmt(rule.minPerDay);
     $("maxLabel").textContent = fmt(rule.maxPerDay);
-    const pct = Math.max(0, Math.min(100, ((r.ratePerDay - rule.minPerDay) / (rule.maxPerDay - rule.minPerDay)) * 100));
+    const pct = Math.max(0, Math.min(100, (((r.fuelRatePerDay ?? r.ratePerDay) - rule.minPerDay) / (rule.maxPerDay - rule.minPerDay)) * 100));
     $("marker").style.left = `${pct}%`;
     const lim = $("limitText");
     lim.className = r.clamped ? "warn" : "";
@@ -183,7 +185,7 @@
     const body = $("howBody");
     clear(body);
     if (r.legacy) {
-      body.append(el("p", { class: "note", text: `Old terms: a fixed ${fmt(rule.legacyPerDay)} L.L. per day. No fuel averaging before October 2026.` }));
+      body.append(el("p", { class: "note", text: `Old terms: a fixed ${fmt(rule.legacyPerDay)} L.L. per day. No fuel averaging before 22 October 2026.` }));
       return;
     }
     const table = el("table", { class: "grid" },
@@ -199,8 +201,12 @@
         `Σ price × days ÷ days = ${fmt(r.sumQuoteDays)} ÷ ${r.days}`),
       step("Average price / litre", `${fmt(r.avgPerLitre)} L.L.`, `÷ ${rule.litresPerQuote}`),
       step(`× ${rule.litresPerDay} litres`, `${fmt(r.rawPerDay)} L.L.`),
-      step(`Daily rate (rounded, ${fmt(rule.minPerDay / 1000)}K–${fmt(rule.maxPerDay / 1000)}K)`, `${fmt(r.ratePerDay)} L.L.`,
-        `rounded to the nearest ${fmt(rule.roundTo)}${r.rawPerDay === r.ratePerDay ? "" : ` → ${fmt(r.roundedPerDay)}`}`, true));
+      step(`Fuel daily rate (rounded, ${fmt(rule.minPerDay / 1000)}K–${fmt(rule.maxPerDay / 1000)}K)`, `${fmt(r.fuelRatePerDay)} L.L.`,
+        `rounded to the nearest ${fmt(rule.roundTo)}${r.rawPerDay === r.fuelRatePerDay ? "" : ` → ${fmt(r.roundedPerDay)}`}`, !r.mixed));
+    if (r.mixed) {
+      steps.append(step(`Month rate: ${r.oldDays} days × ${fmt(rule.legacyPerDay)} + ${r.newDays} days × ${fmt(r.fuelRatePerDay)}`,
+        `${fmt(r.ratePerDay)} L.L.`, `÷ ${r.daysInMonth} days (fuel rule starts 22 Oct 2026)`, true));
+    }
     body.append(steps);
 
     if (r.clamped) {
