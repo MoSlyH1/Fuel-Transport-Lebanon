@@ -76,7 +76,7 @@ test("wrong method and unknown paths", async () => {
 test("static files are served and path traversal is blocked", async () => {
   const html = await fetch(base + "/");
   assert.equal(html.status, 200);
-  assert.match(await html.text(), /Fuel &amp; Transport/);
+  assert.match(await html.text(), /TransportIQ Lebanon/);
   assert.equal((await fetch(base + "/app.js")).status, 200);
   assert.equal((await fetch(base + "/style.css")).status, 200);
   // raw paths (fetch would tidy them up before sending)

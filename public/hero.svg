@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 220" preserveAspectRatio="xMaxYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b4277"/>
+      <stop offset="1" stop-color="#5d86b5"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#0f2a4d"/>
+      <stop offset=".4" stop-color="#0f2a4d" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#0f2a4d" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="220" fill="url(#sky)"/>
+  <path d="M0 150 L120 95 L210 130 L330 70 L450 120 L560 80 L690 125 L800 60 L930 115 L1040 75 L1200 120 V220 H0z" fill="#3c6496" opacity=".75"/>
+  <path d="M0 175 L150 125 L260 160 L400 110 L520 150 L650 115 L780 160 L900 118 L1030 158 L1200 128 V220 H0z" fill="#2a4f7d"/>
+  <path d="M0 200 L180 165 L320 190 L470 158 L620 192 L760 160 L900 195 L1050 166 L1200 185 V220 H0z" fill="#1d3c63"/>
+  <path d="M1200 160 C1080 168 1010 180 980 192 C950 204 1000 212 1100 220 L1160 220 C1060 212 1020 205 1040 196 C1065 186 1130 176 1200 172z" fill="#c9d6e6" opacity=".55"/>
+  <rect width="1200" height="220" fill="url(#fade)"/>
+</svg>
