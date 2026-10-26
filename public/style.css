@@ -206,3 +206,15 @@ tr.current td { background: var(--green-soft); }
   .brand p { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ===== October 450K / 400K–800K buttons ===== */
+.seg { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
+.seg[hidden] { display: none; }
+.seg-btn { flex: 1 1 140px; display: grid; gap: 2px; padding: 10px 14px; border: 1.5px solid var(--line, #d5ddd8); border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: center; }
+.seg-btn small { font-weight: 400; font-size: 12px; opacity: .75; }
+.seg-btn[aria-pressed="true"] { background: var(--green, #1f5f3a); border-color: var(--green, #1f5f3a); color: #fff; }
+.seg-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--focus, #1f5f3a) 45%, transparent); outline-offset: 2px; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0 4px; }
+.split[hidden] { display: none; }
+@media (max-width: 520px) { .split { grid-template-columns: 1fr; } }

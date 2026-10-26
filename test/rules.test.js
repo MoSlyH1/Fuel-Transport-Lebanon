@@ -19,10 +19,10 @@ test("October 2026: 450,000 before the 22nd, fuel average from the 22nd", () => 
   assert.equal(c.rawPerDay, 684_750);
   assert.equal(c.fuelRatePerDay, 685_000);
   assert.deepEqual([c.oldDays, c.newDays], [21, 10]);
-  assert.equal(c.ratePerDay, Math.round((21 * 450_000 + 10 * 685_000) / 31)); // 525,806
+  assert.equal(c.ratePerDay, 685_000); // fuel button; the 450K button is the fixed old rate
   assert.equal(c.clamped, null);
   const p = R.payslipLine(c.ratePerDay, 26);
-  assert.equal(p.total, 13_670_956);
+  assert.equal(p.total, 17_810_000);
 });
 
 test("segment days always add up to the days averaged", () => {
@@ -55,9 +55,9 @@ test("price in force before the month starts carries into day 1", () => {
   assert.equal(c.segments[0].days, 1);
 });
 
-test("floor of 500,000 and cap of 800,000 apply", () => {
-  const low = R.rateFromAverageQuote(1_800_000);   // 450,000 raw
-  assert.equal(low.ratePerDay, 500_000);
+test("floor of 400,000 and cap of 800,000 apply", () => {
+  const low = R.rateFromAverageQuote(1_400_000);   // 350,000 raw
+  assert.equal(low.ratePerDay, 400_000);
   assert.equal(low.clamped, "min");
   const high = R.rateFromAverageQuote(3_400_000);  // 850,000 raw
   assert.equal(high.ratePerDay, 800_000);

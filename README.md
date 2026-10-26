@@ -9,17 +9,19 @@ Vanilla JS front end · Node.js back end · PostgreSQL · Docker · Vercel-ready
 | | |
 |---|---|
 | Old terms (before Oct 2026) | fixed **450,000 L.L.** / day |
-| New terms (from Oct 2026) | **5 L** of UNL 95 per day, indexed to the average official price, kept between **500,000 and 800,000 L.L.** / day |
+| New terms (from Oct 2026) | **5 L** of UNL 95 per day, indexed to the average official price, kept between **400,000 and 800,000 L.L.** / day |
 
 ```
 average price / 20 L = Σ (price × days in force) ÷ days      (calendar days of the pay month)
 price of 1 litre     = average ÷ 20
-daily rate           = 5 × price of 1 litre → rounded to 1,000 → kept within 500,000–800,000
+daily rate           = 5 × price of 1 litre → rounded to 1,000 → kept within 400,000–800,000
 transportation       = days worked × daily rate  (× employees)
 ```
 
 The current month is averaged up to today and keeps updating when IPT publishes a new table;
 a future month is an estimate from the latest table. Constants live in `lib/rules.js`.
+
+October 2026 has split: days before 22 Oct at **450,000** + days from 22 Oct at the fuel rate (**400K – 800K**).
 
 Check: October 2026 to 22 Oct → average 2,798,591 → 699,648 → **700,000 / day** → 26 days = **18,200,000 L.L.**
 

@@ -40,7 +40,19 @@
   const clear = (n) => { while (n.firstChild) n.removeChild(n.firstChild); };
 
   /* ---------- state ---------- */
-  const state = { month: null, days: 26, employees: 1, data: null, seq: 0, loadedAt: 0 };
+  const state = { month: null, days: 26, daysOld: 18, daysNew: 8, employees: 1, data: null, seq: 0, loadedAt: 0 };
+
+  // October 2026 is split: days before 22 Oct at 450,000 + days from 22 Oct at the fuel rate (400K–800K).
+  // lineFor() → total per employee and the average rate per day it works out to.
+  const daysOf = (r) => (r.mixed ? (state.daysOld == null || state.daysNew == null ? null : state.daysOld + state.daysNew) : state.days);
+  function lineFor(r, days) {
+    if (r.mixed) {
+      const total = state.daysOld * r.oldRatePerDay + state.daysNew * r.ratePerDay;
+      const n = state.daysOld + state.daysNew;
+      return { total, days: n, avg: n ? total / n : r.ratePerDay };
+    }
+    return { total: days * r.ratePerDay, days, avg: r.ratePerDay };
+  }
 
   /* ---------- loading ---------- */
   async function load({ month = state.month, fresh = false } = {}) {
@@ -136,6 +148,7 @@
   function renderRate() {
     const { rate: r, rule } = state.data;
     $("eyebrow").textContent = r.legacy ? "DAILY RATE · OLD TERMS (FIXED)" : r.mixed ? "DAILY RATE · OLD + FUEL-INDEXED" : "DAILY RATE · FUEL-INDEXED";
+    $("splitBox").hidden = !r.mixed;
     $("rate").textContent = fmt(r.ratePerDay);
 
     if (r.legacy) {
@@ -143,11 +156,11 @@
     } else {
       const suffix = r.status === "partial" ? " (to date)" : r.status === "future" ? " (estimate from the latest price)" : "";
       $("rateSub").textContent = r.mixed
-        ? `${r.oldDays} days at ${fmt(rule.legacyPerDay)} + ${r.newDays} days at ${fmt(r.fuelRatePerDay)} (fuel average ${rangeLabel(r.averagedFrom, r.averagedTo)})${suffix}`
+        ? `Fuel rate from 22 October (days before 22 Oct are paid at ${fmt(rule.legacyPerDay)}): ${rule.litresPerDay} L/day at the average official fuel price · ${rangeLabel(r.averagedFrom, r.averagedTo)}${suffix}`
         : `${rule.litresPerDay} L/day at the average official fuel price · ${rangeLabel(r.averagedFrom, r.averagedTo)}${suffix}`;
     }
 
-    // meter (the 500K–800K limits apply to the fuel rate)
+    // meter (the 400K–800K limits apply to the fuel rate)
     $("meter").hidden = r.legacy;
     $("minLabel").textContent = fmt(rule.minPerDay);
     $("maxLabel").textContent = fmt(rule.maxPerDay);
@@ -163,14 +176,17 @@
 
   function renderPayslip() {
     const r = state.data.rate;
-    const days = state.days, emp = state.employees;
+    const days = daysOf(r), emp = state.employees;
     const ok = days != null && emp != null;
     $("payLabel").textContent = emp > 1 && ok ? `For ${fmt(emp)} employees` : "On the payslip";
     if (!ok) { $("payLine").textContent = "—"; $("oldLine").textContent = "—"; return; }
-    const total = days * r.ratePerDay * emp;
-    const old = days * r.oldRatePerDay * emp;
+    const L = lineFor(r, days);
+    const total = L.total * emp;
+    const old = L.days * r.oldRatePerDay * emp;
     const lead = emp > 1 ? `${fmt(emp)} × ` : "";
-    $("payLine").textContent = `${lead}${fmt(days)} × ${fmt(r.ratePerDay)} = ${fmt(total)} L.L.`;
+    $("payLine").textContent = r.mixed
+      ? `${lead}(${fmt(state.daysOld)} × ${fmt(r.oldRatePerDay)}) + (${fmt(state.daysNew)} × ${fmt(r.ratePerDay)}) = ${fmt(total)} L.L.`
+      : `${lead}${fmt(days)} × ${fmt(r.ratePerDay)} = ${fmt(total)} L.L.`;
     $("oldLine").textContent = r.legacy ? `${fmt(old)} L.L.` : `${fmt(old)} L.L. (${signed(total - old)} now)`;
   }
 
@@ -202,11 +218,7 @@
       step("Average price / litre", `${fmt(r.avgPerLitre)} L.L.`, `÷ ${rule.litresPerQuote}`),
       step(`× ${rule.litresPerDay} litres`, `${fmt(r.rawPerDay)} L.L.`),
       step(`Fuel daily rate (rounded, ${fmt(rule.minPerDay / 1000)}K–${fmt(rule.maxPerDay / 1000)}K)`, `${fmt(r.fuelRatePerDay)} L.L.`,
-        `rounded to the nearest ${fmt(rule.roundTo)}${r.rawPerDay === r.fuelRatePerDay ? "" : ` → ${fmt(r.roundedPerDay)}`}`, !r.mixed));
-    if (r.mixed) {
-      steps.append(step(`Month rate: ${r.oldDays} days × ${fmt(rule.legacyPerDay)} + ${r.newDays} days × ${fmt(r.fuelRatePerDay)}`,
-        `${fmt(r.ratePerDay)} L.L.`, `÷ ${r.daysInMonth} days (fuel rule starts 22 Oct 2026)`, true));
-    }
+        `rounded to the nearest ${fmt(rule.roundTo)}${r.rawPerDay === r.fuelRatePerDay ? "" : ` → ${fmt(r.roundedPerDay)}`}`, true));
     body.append(steps);
 
     if (r.clamped) {
@@ -232,12 +244,15 @@
       const sub = m.status === "partial" ? `${m.days} days · to date` : `full month · ${m.days} days`;
       const btn = el("button", { class: "month-btn", type: "button", "data-month": m.month },
         m.label, el("span", { class: "sub", text: sub }));
+      const rowOk = ok && daysOf(m) != null;
+      const mL = rowOk ? lineFor(m, days) : { total: 0, avg: m.ratePerDay };
+      const mRate = m.mixed ? mL.avg : m.ratePerDay;
       const tag = m.clamped ? el("span", { class: "tag", text: m.clamped === "min" ? "min" : "max" }) : null;
       body.append(el("tr", { class: m.month === state.month ? "current" : "" },
         el("td", {}, btn),
         el("td", { class: "num", text: m.avgQuote20L != null ? fmt(m.avgQuote20L) : "—" }),
-        el("td", { class: "num" }, fmt(m.ratePerDay), tag),
-        el("td", { class: "num", text: ok ? fmt(m.ratePerDay * days * emp) : "—" })));
+        el("td", { class: "num" }, fmt(mRate), tag),
+        el("td", { class: "num", text: rowOk ? fmt(mL.total * emp) : "—" })));
     }
     $("monthsSub").textContent = `Tap a month to see its calculation. Terms from ${state.data.months[0].label}: ${fmt(rule.minPerDay)}–${fmt(rule.maxPerDay)} L.L. per day.`;
   }
@@ -274,6 +289,12 @@
     load({ month: b.dataset.month });
     $("calc").scrollIntoView({ behavior: "smooth", block: "start" });
   });
+  for (const [id, key, max] of [["daysOld", "daysOld", 21], ["daysNew", "daysNew", 10]]) {
+    $(id).addEventListener("input", () => {
+      state[key] = readInt($(id), 0, max);
+      if (state.data) { renderPayslip(); renderMonths(); }
+    });
+  }
   $("retryBtn").addEventListener("click", () => load());
 
   /* ---------- "Update from IPT" ---------- */
