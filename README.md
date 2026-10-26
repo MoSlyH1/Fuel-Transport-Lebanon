@@ -9,12 +9,12 @@ Vanilla JS front end · Node.js back end · PostgreSQL · Docker · Vercel-ready
 | | |
 |---|---|
 | Old terms (before Oct 2026) | fixed **450,000 L.L.** / day |
-| New terms (from Oct 2026) | **5 L** of UNL 95 per day, indexed to the average official price, kept between **400,000 and 800,000 L.L.** / day |
+| New terms (from Oct 2026) | **5 L** of UNL 95 per day, indexed to the average official price, kept between **500,000 and 800,000 L.L.** / day |
 
 ```
 average price / 20 L = Σ (price × days in force) ÷ days      (calendar days of the pay month)
 price of 1 litre     = average ÷ 20
-daily rate           = 5 × price of 1 litre → rounded to 1,000 → kept within 400,000–800,000
+daily rate           = 5 × price of 1 litre → rounded to 1,000 → kept within 500,000–800,000
 transportation       = days worked × daily rate  (× employees)
 ```
 

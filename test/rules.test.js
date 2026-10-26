@@ -55,7 +55,7 @@ test("price in force before the month starts carries into day 1", () => {
   assert.equal(c.segments[0].days, 1);
 });
 
-test("floor of 400,000 and cap of 800,000 apply", () => {
+test("floor of 500,000 and cap of 800,000 apply", () => {
   const low = R.rateFromAverageQuote(1_400_000);   // 350,000 raw
   assert.equal(low.ratePerDay, 400_000);
   assert.equal(low.clamped, "min");
