@@ -42,7 +42,7 @@
   /* ---------- state ---------- */
   const state = { month: null, days: 26, daysOld: 18, daysNew: 8, employees: 1, data: null, seq: 0, loadedAt: 0 };
 
-  // October 2026 is split: days before 22 Oct at 450,000 + days from 22 Oct at the fuel rate (400K–800K).
+  // October 2026 is split: days before 22 Oct at 450,000 + days from 22 Oct at the fuel rate (500K–800K).
   // lineFor() → total per employee and the average rate per day it works out to.
   const daysOf = (r) => (r.mixed ? (state.daysOld == null || state.daysNew == null ? null : state.daysOld + state.daysNew) : state.days);
   function lineFor(r, days) {
@@ -160,7 +160,7 @@
         : `${rule.litresPerDay} L/day at the average official fuel price · ${rangeLabel(r.averagedFrom, r.averagedTo)}${suffix}`;
     }
 
-    // meter (the 400K–800K limits apply to the fuel rate)
+    // meter (the 500K–800K limits apply to the fuel rate)
     $("meter").hidden = r.legacy;
     $("minLabel").textContent = fmt(rule.minPerDay);
     $("maxLabel").textContent = fmt(rule.maxPerDay);

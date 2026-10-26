@@ -207,7 +207,7 @@ tr.current td { background: var(--green-soft); }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 
-/* ===== October 450K / 400K–800K buttons ===== */
+/* ===== October 450K / 500K–800K buttons ===== */
 .seg { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
 .seg[hidden] { display: none; }
 .seg-btn { flex: 1 1 140px; display: grid; gap: 2px; padding: 10px 14px; border: 1.5px solid var(--line, #d5ddd8); border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 700; cursor: pointer; text-align: center; }

@@ -29,7 +29,7 @@ test("summary: prices, rate, payslip and months", async () => {
   const { r, j } = await get("/api/summary?month=2026-10&days=26");
   assert.equal(r.status, 200);
   assert.equal(j.rate.fuelRatePerDay, 685_000);
-  assert.equal(j.rate.ratePerDay, 685_000); // "400K–800K" button (from 22 Oct)
+  assert.equal(j.rate.ratePerDay, 685_000); // "500K–800K" button (from 22 Oct)
   assert.equal(j.rate.oldRatePerDay, 450_000); // "450K" button
   assert.equal(j.payslip.total, 17_810_000);
   const f = Object.fromEntries(j.prices.fuels.map((x) => [x.key, x]));
