@@ -224,10 +224,12 @@
           <div class="oct-pick">
             <label for="octFrom">New terms start on</label>
             <button class="link-btn" id="octWhole" type="button">Whole month</button>
-            <input class="date-input" id="octFrom" type="date" aria-describedby="octHow">
+            <input class="date-input" id="octFrom" type="date">
           </div>
 
           <div class="oct-chips" id="octChips" role="group" aria-label="Start from a price change"></div>
+          <button class="oct-new" id="octNew" type="button" aria-pressed="false">Whole month · new average only</button>
+          <p class="oct-err small" id="octErr" hidden></p>
 
           <div class="table-wrap oct-wrap">
             <table class="grid oct-grid" aria-live="polite">
@@ -242,9 +244,6 @@
             <b><span id="octAvg">—</span> <small>L.L.</small></b>
           </div>
           <p class="oct-emp muted small" id="octEmp" hidden></p>
-
-          <p class="oct-how muted small" id="octHow"></p>
-          <p class="oct-foot muted small"><span id="octFoot"></span> <button class="link-btn" id="octRecheck" type="button">Check IPT</button></p>
 
           <!-- free space on purpose: add more content here later -->
           <div class="oct-slot" id="octExtra"></div>

@@ -156,3 +156,12 @@ test("October calculator: dates are clamped, limits apply, weekends are not work
   assert.equal(low.ratePerDay, 500_000);
   assert.equal(low.clamped, "min");
 });
+
+
+test("October calculator: whole month on the new average only (no 450K days)", () => {
+  const c = R.calculatePeriod(undefined, tables, "2026-10-30", { newOnly: true });
+  assert.equal(c.mode, "new");
+  assert.equal(c.ratePerDay, 690_000);                // same 8 prices as the whole-month average
+  assert.deepEqual(c.rows.map((r) => [r.key, r.from, r.to, r.days, r.total]), [["new", "2026-10-01", "2026-10-31", 26, 17_940_000]]);
+  assert.equal(c.avgPerDay, 690_000);
+});

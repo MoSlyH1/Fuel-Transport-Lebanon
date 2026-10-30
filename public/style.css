@@ -345,6 +345,13 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .chip:disabled { opacity: .45; cursor: not-allowed; }
 .oct-chips .chip.soft { border-style: dashed; }
 .oct-chips .chip:disabled { opacity: .5; cursor: not-allowed; }
+.oct-new {
+  width: 100%; margin: -2px 0 10px; padding: 7px 10px; border: 1px solid var(--blue-line); border-radius: 8px;
+  background: var(--blue-soft); color: var(--blue); font: 600 12.5px var(--sans); cursor: pointer;
+}
+.oct-new:hover { border-color: var(--blue); }
+.oct-new[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+.oct-err { color: var(--red); margin: 0 0 8px; }
 .oct-wrap { overflow: hidden; }
 .oct-grid th, .oct-grid td { padding: 8px 10px; }
 .oct-grid thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
@@ -363,11 +370,6 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .oct-avg b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
 .oct-avg small { font-size: 12px; font-weight: 600; letter-spacing: 0; }
 .oct-emp { margin-top: 6px; }
-.oct-how { margin-top: 10px; line-height: 1.5; }
-.oct-how b { color: var(--ink); font-weight: 600; }
-.oct-how .tag { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 99px; font-size: 10.5px; font-weight: 700; background: var(--orange-soft); color: var(--orange); }
-.oct-how .tag.ok { background: var(--green-soft); color: var(--green-ink); }
-.oct-foot { margin-top: 8px; font-size: 11.5px; }
 .oct-slot { flex: 1; min-height: 0; }
 
 /* ===== fuel history + Excel export panel ===== */
@@ -443,7 +445,7 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 /* ===== print ===== */
 @media print {
   .top { background: none; color: #000; }
-  .top-actions, .alert, #actionsCard, .xl, .oct-foot .link-btn, .foot-brand { display: none !important; }
+  .top-actions, .alert, #actionsCard, .xl, .foot-brand { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; break-inside: avoid; }
   .layout, .calc-row, .history-body { grid-template-columns: 1fr; }

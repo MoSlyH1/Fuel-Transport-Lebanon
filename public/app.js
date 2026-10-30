@@ -497,7 +497,7 @@
        days from the date use the fuel rate, averaged from the date until today
      The server does the maths (/api/period); the days stay editable here.
      ===================================================================== */
-  state.oct = { from: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
+  state.oct = { from: null, mode: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
 
   const shortRange = (a, b) => {
     const [, m1, d1] = part(a), [, m2, d2] = part(b);
@@ -505,25 +505,29 @@
     return m1 === m2 ? `${d1} – ${d2} ${MON[m1 - 1]}` : `${d1} ${MON[m1 - 1]} – ${d2} ${MON[m2 - 1]}`;
   };
 
-  async function loadOct(from) {
+  async function loadOct(from, mode = null) {
     const my = ++state.oct.seq;
     try {
-      const res = await fetch(`/api/period${from ? `?from=${encodeURIComponent(from)}` : ""}`, { headers: { Accept: "application/json" } });
+      const res = await fetch(`/api/period?${new URLSearchParams({ ...(from ? { from } : {}), ...(mode ? { mode } : {}) })}`, { headers: { Accept: "application/json" } });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error((body && body.error) || `Server error (${res.status})`);
       if (my !== state.oct.seq) return;
       const o = state.oct;
       o.data = body;
       o.from = body.from;
-      if (o.daysFor !== body.from) {            // a new start date → days go back to the defaults
-        o.daysFor = body.from;
+      o.mode = body.mode === "new" ? "new" : null;
+      const key = `${body.from}|${o.mode}`;
+      if (o.daysFor !== key) {                  // a new start date / mode → days go back to the defaults
+        o.daysFor = key;
         o.days = { old: null, new: null };
         for (const r of body.rows) o.days[r.key] = r.days;
       }
+      $("octErr").hidden = true;
       renderOct(true);
     } catch (e) {
       if (my !== state.oct.seq) return;
-      $("octHow").textContent = e && e.message && !/failed to fetch|networkerror|load failed/i.test(e.message)
+      $("octErr").hidden = false;
+      $("octErr").textContent = e && e.message && !/failed to fetch|networkerror|load failed/i.test(e.message)
         ? e.message : "Couldn't reach the server. Check your connection and try again.";
     }
   }
@@ -538,19 +542,20 @@
     inp.min = d.first; inp.max = d.to;
     if (document.activeElement !== inp) inp.value = d.from;
     inp.setAttribute("aria-invalid", "false");
-    $("octWhole").hidden = d.from === d.first;
+    $("octWhole").hidden = d.from === d.first && d.mode !== "new";
+    $("octNew").setAttribute("aria-pressed", String(d.mode === "new"));
     const badge = $("octBadge");
     badge.textContent = d.status === "complete" ? "full month" : `to ${shortDay(d.to)}`;
 
     // one chip per IPT price change in October → start the new average from that table
     const chips = $("octChips");
-    const csig = d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from;
+    const csig = d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from + "|" + d.mode;
     if (chips.dataset.sig !== csig) {
       chips.dataset.sig = csig;
       clear(chips);
       for (const c of d.chips) {
         chips.append(el("button", {
-          type: "button", class: "chip" + (c.published ? "" : " soft"), "data-date": c.date, "aria-pressed": String(c.date === d.from),
+          type: "button", class: "chip" + (c.published ? "" : " soft"), "data-date": c.date, "aria-pressed": String(d.mode !== "new" && c.date === d.from),
           disabled: c.future, text: shortDay(c.date),
           title: c.future ? "Not published yet — available as soon as IPT publishes it" : c.published ? null : "No new table that day — the price in force is used",
         }));
@@ -558,7 +563,7 @@
     }
 
     // rows (rebuilt only when the date / prices change, so typing keeps its focus)
-    const sig = `${d.from}|${d.to}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
+    const sig = `${d.from}|${d.to}|${d.mode}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
     const tb = $("octBody");
     if (rebuild || tb.dataset.sig !== sig) {
       tb.dataset.sig = sig;
@@ -588,19 +593,6 @@
     const em = $("octEmp");
     em.hidden = !(ok && emp > 1);
     if (!em.hidden) em.textContent = `For ${fmt(emp)} employees: ${fmt(total * emp)} L.L.`;
-
-    // how the rate was found
-    const how = $("octHow");
-    clear(how);
-    const lim = d.clamped === "min" ? `raised to the ${fmt(d.rule.minPerDay)} minimum`
-      : d.clamped === "max" ? `capped at the ${fmt(d.rule.maxPerDay)} maximum` : `within ${fmt(d.rule.minPerDay)} – ${fmt(d.rule.maxPerDay)}`;
-    how.append(
-      `Fuel rate from ${shortDay(d.from)}: `, el("b", { text: `${fmt(d.count)} IPT price${d.count === 1 ? "" : "s"}` }),
-      ` (${shortRange(d.from, d.to)}) → average `, el("b", { text: fmt(d.avgQuote20L) }),
-      ` per 20 L → ÷ 20 × ${d.rule.litresPerDay} L = ${fmt(d.rawPerDay)} → `, el("b", { text: `${fmt(d.ratePerDay)} / day` }),
-      el("span", { class: "tag" + (d.clamped ? "" : " ok"), text: lim }));
-    $("octFoot").textContent = `IPT table of ${dayLabel(d.latestTable)}` +
-      (d.checkedAt ? ` · checked ${new Date(d.checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : " · saved prices") + ".";
   }
 
   $("octFrom").addEventListener("change", (e) => {
@@ -609,12 +601,12 @@
     if (!v || (d && (v < d.first || v > d.to))) { e.target.setAttribute("aria-invalid", "true"); return; }
     loadOct(v);
   });
+  $("octNew").addEventListener("click", () => loadOct(null, "new"));
   $("octChips").addEventListener("click", (e) => {
     const c = e.target.closest(".chip");
     if (c) loadOct(c.dataset.date);
   });
   $("octWhole").addEventListener("click", () => state.oct.data && loadOct(state.oct.data.first));
-  $("octRecheck").addEventListener("click", () => $("updateBtn").click());
   $("octBody").addEventListener("input", (e) => {
     const inp = e.target.closest(".day-input");
     if (!inp) return;
