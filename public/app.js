@@ -112,6 +112,7 @@
     renderChart();
     renderUpdates();
     renderHistory();
+    renderExport();
     renderFooter();
   }
 
@@ -224,21 +225,24 @@
     if (r.segments && r.segments.length) {
       used.append(el("h4", { text: "Prices used for the average" }));
       used.append(el("table", { class: "segments" },
-        el("thead", {}, el("tr", {}, el("th", { text: "Price in force" }), el("th", { class: "num", text: "Days" }), el("th", { class: "num", text: `${rule.fuel} / ${rule.litresPerQuote} L` }))),
+        el("thead", {}, el("tr", {}, el("th", { text: "Official price table" }), el("th", { class: "num", text: `${rule.fuel} / ${rule.litresPerQuote} L` }))),
         el("tbody", {}, r.segments.map((s) => el("tr", {},
-          el("td", { text: rangeLabel(s.from, s.to) }),
-          el("td", { class: "num", text: String(s.days) }),
-          el("td", { class: "num", text: fmt(s.unl95) }))))));
+          el("td", { text: `In force from ${dayLabel(s.tableDate)}` }),
+          el("td", { class: "num", text: fmt(s.unl95) }))),
+        ),
+        el("tfoot", {}, el("tr", {},
+          el("th", { text: `Average (${fmt(r.sumQuotes)} ÷ ${r.count})` }),
+          el("th", { class: "num", text: fmt(r.avgQuote20L) })))));
     }
     if (r.status === "partial") {
-      used.append(el("p", { class: "note", text: "This month isn't over yet: the average covers the days up to today and updates itself whenever IPT publishes new prices." }));
+      used.append(el("p", { class: "note", text: "This month isn't over yet: the average uses the price tables published up to today and updates itself whenever IPT publishes a new one." }));
     } else if (r.status === "future") {
       used.append(el("p", { class: "note", text: "No prices are published for this month yet. This is an estimate from the latest table and will update automatically." }));
     }
 
 
     $("rateSub").textContent =
-      `Calculated using the average official ${rule.fuel} price over ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.days} day${r.days === 1 ? "" : "s"}), ` +
+      `Calculated using the average of the official ${rule.fuel} price tables for ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.count} price${r.count === 1 ? "" : "s"}), ` +
       `multiplied by ${rule.litresPerDay} litres per day, then rounded to the nearest ${fmt(rule.roundTo)} L.L. and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
   }
 
@@ -321,30 +325,7 @@
       ? `Old terms: ${fmt(state.data.rule.legacyPerDay)} L.L. per day.`
       : `Under the old terms (${fmt(r.oldRatePerDay)} / day) this would be ${fmt(old)} L.L. — ${signed(total - old)} L.L. now.`;
 
-    renderMonths();
-  }
-
-  function renderMonths() {
-    const { months, rule } = state.data;
-    const days = state.days, emp = state.employees;
-    const ok = days != null && emp != null;
-    $("thTotal").textContent = ok ? `${days} days${emp > 1 ? ` × ${fmt(emp)}` : ""}` : "Total";
-    const body = $("monthsBody");
-    clear(body);
-    for (const m of months.filter((x) => x.status !== "future")) {
-      const sub = m.status === "partial" ? `${m.days} days averaged · to date` : `full month · ${m.days} days`;
-      const btn = el("button", { class: "month-btn", type: "button", "data-month": m.month }, m.label, el("span", { class: "sub", text: sub }));
-      const rowOk = ok && daysOf(m) != null;
-      const mL = rowOk ? lineFor(m, days) : { total: 0, avg: m.ratePerDay };
-      const mRate = m.mixed ? mL.avg : m.ratePerDay;
-      const tag = m.clamped ? el("span", { class: "tag", text: m.clamped === "min" ? "min" : "max" }) : null;
-      body.append(el("tr", { class: m.month === state.month ? "current" : "" },
-        el("td", {}, btn),
-        el("td", { class: "num", text: m.avgQuote20L != null ? fmt(m.avgQuote20L) : "—" }),
-        el("td", { class: "num" }, fmt(mRate), tag),
-        el("td", { class: "num", text: rowOk ? fmt(mL.total * emp) : "—" })));
-    }
-    $("monthsSub").textContent = `Select a month to see its calculation. From ${state.data.months[0].label}: ${fmt(rule.minPerDay)}–${fmt(rule.maxPerDay)} L.L. per day.`;
+    renderOct();
   }
 
   /* ---------- trend chart (UNL 95) ---------- */
@@ -470,16 +451,10 @@
     renderTotals();
   });
   for (const id of ["month", "monthTile"]) $(id).addEventListener("change", (e) => load({ month: e.target.value }));
-  $("monthsBody").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-month]");
-    if (!b) return;
-    load({ month: b.dataset.month });
-    $("calc").scrollIntoView({ behavior: "smooth", block: "start" });
-  });
   $("retryBtn").addEventListener("click", () => load());
 
   /* ---------- quick actions ---------- */
-  $("reportBtn").addEventListener("click", () => $("reports").scrollIntoView({ behavior: "smooth", block: "start" }));
+  $("reportBtn").addEventListener("click", () => $("octCalc").scrollIntoView({ behavior: "smooth", block: "center" }));
   $("printBtn").addEventListener("click", () => window.print());
   $("exportBtn").addEventListener("click", () => {
     if (!state.data) return;
@@ -488,7 +463,7 @@
     const days = daysOf(r);
     const L = days != null ? lineFor(r, days) : null;
     const rows = [
-      ["TransportIQ Lebanon — transportation allowance"],
+      ["Transport Lebanon — transportation allowance"],
       ["Payroll period", r.label],
       ["Fuel", rule.fuel], ["Litres per day", rule.litresPerDay],
       ["Average price / 20 L", r.avgQuote20L ?? ""], ["Daily rate (L.L.)", r.ratePerDay],
@@ -515,6 +490,311 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
+
+  /* =====================================================================
+     October calculator — "the new terms start on <date>"
+       days before the date (from 2 Oct) stay at 450,000
+       days from the date use the fuel rate, averaged from the date until today
+     The server does the maths (/api/period); the days stay editable here.
+     ===================================================================== */
+  state.oct = { from: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
+
+  const shortRange = (a, b) => {
+    const [, m1, d1] = part(a), [, m2, d2] = part(b);
+    if (a === b) return `${d1} ${MON[m1 - 1]}`;
+    return m1 === m2 ? `${d1} – ${d2} ${MON[m1 - 1]}` : `${d1} ${MON[m1 - 1]} – ${d2} ${MON[m2 - 1]}`;
+  };
+
+  async function loadOct(from) {
+    const my = ++state.oct.seq;
+    try {
+      const res = await fetch(`/api/period${from ? `?from=${encodeURIComponent(from)}` : ""}`, { headers: { Accept: "application/json" } });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((body && body.error) || `Server error (${res.status})`);
+      if (my !== state.oct.seq) return;
+      const o = state.oct;
+      o.data = body;
+      o.from = body.from;
+      if (o.daysFor !== body.from) {            // a new start date → days go back to the defaults
+        o.daysFor = body.from;
+        o.days = { old: null, new: null };
+        for (const r of body.rows) o.days[r.key] = r.days;
+      }
+      renderOct(true);
+    } catch (e) {
+      if (my !== state.oct.seq) return;
+      $("octHow").textContent = e && e.message && !/failed to fetch|networkerror|load failed/i.test(e.message)
+        ? e.message : "Couldn't reach the server. Check your connection and try again.";
+    }
+  }
+
+  function renderOct(rebuild) {
+    const o = state.oct, d = o.data;
+    if (!d) return;
+    const emp = state.employees ?? 1;
+
+    // controls
+    const inp = $("octFrom");
+    inp.min = d.first; inp.max = d.to;
+    if (document.activeElement !== inp) inp.value = d.from;
+    inp.setAttribute("aria-invalid", "false");
+    $("octWhole").hidden = d.from === d.first;
+    const badge = $("octBadge");
+    badge.textContent = d.status === "complete" ? "full month" : `to ${shortDay(d.to)}`;
+
+    // one chip per IPT price change in October → start the new average from that table
+    const chips = $("octChips");
+    const csig = d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from;
+    if (chips.dataset.sig !== csig) {
+      chips.dataset.sig = csig;
+      clear(chips);
+      for (const c of d.chips) {
+        chips.append(el("button", {
+          type: "button", class: "chip" + (c.published ? "" : " soft"), "data-date": c.date, "aria-pressed": String(c.date === d.from),
+          disabled: c.future, text: shortDay(c.date),
+          title: c.future ? "Not published yet — available as soon as IPT publishes it" : c.published ? null : "No new table that day — the price in force is used",
+        }));
+      }
+    }
+
+    // rows (rebuilt only when the date / prices change, so typing keeps its focus)
+    const sig = `${d.from}|${d.to}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
+    const tb = $("octBody");
+    if (rebuild || tb.dataset.sig !== sig) {
+      tb.dataset.sig = sig;
+      clear(tb);
+      for (const r of d.rows) {
+        const isNew = r.key === "new";
+        const input = el("input", { class: "day-input", type: "number", inputmode: "numeric", min: "0", max: "31", step: "1", "data-key": r.key, "aria-label": `Days worked ${shortRange(r.from, r.to)}` });
+        input.value = o.days[r.key] == null ? "" : String(o.days[r.key]);
+        tb.append(el("tr", { class: isNew ? "fuel-row" : "" },
+          el("td", {}, el("span", { class: "per", text: shortRange(r.from, r.to) }),
+            el("span", { class: "sub", text: `${fmt(r.ratePerDay)} / day` })),
+          el("td", { class: "num" }, input),
+          el("td", { class: "num", "data-oct-total": r.key })));
+      }
+    }
+    let days = 0, total = 0, ok = true;
+    for (const r of d.rows) {
+      const n = o.days[r.key];
+      const cell = tb.querySelector(`[data-oct-total="${r.key}"]`);
+      if (n == null) { ok = false; cell.textContent = "—"; continue; }
+      days += n; total += n * r.ratePerDay;
+      cell.textContent = fmt(n * r.ratePerDay);
+    }
+    $("octDays").textContent = ok ? String(days) : "—";
+    $("octTotal").textContent = ok ? fmt(total) : "—";
+    $("octAvg").textContent = ok && days > 0 ? fmt(total / days) : "—";
+    const em = $("octEmp");
+    em.hidden = !(ok && emp > 1);
+    if (!em.hidden) em.textContent = `For ${fmt(emp)} employees: ${fmt(total * emp)} L.L.`;
+
+    // how the rate was found
+    const how = $("octHow");
+    clear(how);
+    const lim = d.clamped === "min" ? `raised to the ${fmt(d.rule.minPerDay)} minimum`
+      : d.clamped === "max" ? `capped at the ${fmt(d.rule.maxPerDay)} maximum` : `within ${fmt(d.rule.minPerDay)} – ${fmt(d.rule.maxPerDay)}`;
+    how.append(
+      `Fuel rate from ${shortDay(d.from)}: `, el("b", { text: `${fmt(d.count)} IPT price${d.count === 1 ? "" : "s"}` }),
+      ` (${shortRange(d.from, d.to)}) → average `, el("b", { text: fmt(d.avgQuote20L) }),
+      ` per 20 L → ÷ 20 × ${d.rule.litresPerDay} L = ${fmt(d.rawPerDay)} → `, el("b", { text: `${fmt(d.ratePerDay)} / day` }),
+      el("span", { class: "tag" + (d.clamped ? "" : " ok"), text: lim }));
+    $("octFoot").textContent = `IPT table of ${dayLabel(d.latestTable)}` +
+      (d.checkedAt ? ` · checked ${new Date(d.checkedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : " · saved prices") + ".";
+  }
+
+  $("octFrom").addEventListener("change", (e) => {
+    const v = e.target.value;
+    const d = state.oct.data;
+    if (!v || (d && (v < d.first || v > d.to))) { e.target.setAttribute("aria-invalid", "true"); return; }
+    loadOct(v);
+  });
+  $("octChips").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (c) loadOct(c.dataset.date);
+  });
+  $("octWhole").addEventListener("click", () => state.oct.data && loadOct(state.oct.data.first));
+  $("octRecheck").addEventListener("click", () => $("updateBtn").click());
+  $("octBody").addEventListener("input", (e) => {
+    const inp = e.target.closest(".day-input");
+    if (!inp) return;
+    state.oct.days[inp.dataset.key] = readInt(inp, 0, 31);
+    renderOct(false);
+  });
+
+  /* =====================================================================
+     Fuel Price History → Excel (.xlsx), with a date range
+     A tiny hand-made .xlsx (zip of XML files) — no library needed.
+     ===================================================================== */
+  const xlsx = (() => {
+    const enc = new TextEncoder();
+    const crcTable = (() => {
+      const t = new Uint32Array(256);
+      for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+      return t;
+    })();
+    const crc32 = (u8) => { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = crcTable[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+
+    function zip(files) { // "stored" entries (no compression) — valid, and plenty for a small sheet
+      const parts = [], central = [];
+      let offset = 0;
+      const now = new Date();
+      const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+      const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+      for (const f of files) {
+        const name = enc.encode(f.name), data = enc.encode(f.text), crc = crc32(data), len = data.length;
+        const lh = new DataView(new ArrayBuffer(30));
+        lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+        lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true);
+        lh.setUint32(18, len, true); lh.setUint32(22, len, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+        parts.push(new Uint8Array(lh.buffer), name, data);
+        const ch = new DataView(new ArrayBuffer(46));
+        ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+        ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true);
+        ch.setUint32(20, len, true); ch.setUint32(24, len, true); ch.setUint16(28, name.length, true); ch.setUint32(42, offset, true);
+        central.push(new Uint8Array(ch.buffer), name);
+        offset += 30 + name.length + len;
+      }
+      const cdSize = central.reduce((a, b) => a + b.length, 0);
+      const end = new DataView(new ArrayBuffer(22));
+      end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+      end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+      return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+
+    const X = (v) => String(v).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]));
+    const col = (i) => String.fromCharCode(65 + i); // A..I is all we need
+    const HEAD = 1, DATE = 2, PRICE = 3, CHANGE = 4; // style ids in styles.xml below
+
+    /** headers: string[]; rows: Array<Array<{t:"s"|"n"|"d", v}|null>>; widths: number[] */
+    function sheet(name, headers, rows, widths) {
+      const cell = (c, r, x, style) => {
+        const ref = `${col(c)}${r}`;
+        if (x == null) return "";
+        if (x.t === "s") return `<c r="${ref}" s="${style}" t="inlineStr"><is><t>${X(x.v)}</t></is></c>`;
+        return `<c r="${ref}" s="${style}"><v>${x.v}</v></c>`;
+      };
+      const head = `<row r="1" ht="32" customHeight="1">${headers.map((h, i) => cell(i, 1, { t: "s", v: h }, HEAD)).join("")}</row>`;
+      const body = rows.map((row, ri) => `<row r="${ri + 2}">${row.map((x, ci) => cell(ci, ri + 2, x, x && x.t === "d" ? DATE : ci % 2 === 1 ? PRICE : CHANGE)).join("")}</row>`).join("");
+      const last = `${col(headers.length - 1)}${rows.length + 1}`;
+      const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
+        `<sheetFormatPr defaultRowHeight="18"/><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` +
+        `<sheetData>${head}${body}</sheetData>${rows.length ? `<autoFilter ref="A1:${last}"/>` : ""}</worksheet>`;
+      const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
+        `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
+        `<numFmts count="2"><numFmt numFmtId="164" formatCode="d mmm yyyy"/><numFmt numFmtId="165" formatCode="[Red]+#,##0;[Color10]-#,##0;&quot;&quot;"/></numFmts>` +
+        `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>` +
+        `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F2A4D"/><bgColor indexed="64"/></patternFill></fill></fills>` +
+        `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
+        `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
+        `<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+        `<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>` +
+        `<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left"/></xf>` +
+        `<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>` +
+        `<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>` +
+        `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+      return zip([
+        { name: "[Content_Types].xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+        { name: "_rels/.rels", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+        { name: "xl/workbook.xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${X(name)}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+        { name: "xl/_rels/workbook.xml.rels", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+        { name: "xl/styles.xml", text: styles },
+        { name: "xl/worksheets/sheet1.xml", text: sheetXml },
+      ]);
+    }
+    return { sheet };
+  })();
+
+  const FUEL_COLS = [["unl95", "UNL 95 (per 20 L)", "UNL 95 change"], ["unl98", "UNL 98 (per 20 L)", "UNL 98 change"],
+    ["diesel", "Diesel (per 20 L)", "Diesel change"], ["lpg", "Gas LPG (per 10 kg)", "Gas LPG change"]];
+  const excelDate = (iso) => { const [y, m, d] = part(iso); return (Date.UTC(y, m - 1, d) - Date.UTC(1899, 11, 30)) / 86_400_000; };
+  const isoToday = () => state.data ? state.data.today : new Date().toISOString().slice(0, 10);
+  const addDaysIso = (iso, n) => { const [y, m, d] = part(iso); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+
+  function exportRange() {
+    const from = $("xlFrom").value, to = $("xlTo").value;
+    const h = (state.data && state.data.history) || [];
+    const ok = from && to && from <= to;
+    const rows = ok ? h.filter((t) => t.date >= from && t.date <= to) : [];
+    return { from, to, ok, rows };
+  }
+
+  function renderExport() {
+    const h = (state.data.history || []);
+    if (!h.length) return;
+    const first = h[0].date, last = h[h.length - 1].date;
+    const f = $("xlFrom"), t = $("xlTo");
+    for (const x of [f, t]) { x.min = first; x.max = last; }
+    if (!f.value || !t.value || !f.dataset.touched) { f.value = first; t.value = last; }   // untouched → the whole history
+    else if (t.dataset.followLatest === "1") t.value = last;                               // a new table arrived → "to" follows it
+    updateExportInfo();
+  }
+
+  function updateExportInfo() {
+    const { from, to, ok, rows } = exportRange();
+    const info = $("xlInfo"), btn = $("xlBtn");
+    info.classList.toggle("bad", !ok || rows.length === 0);
+    if (!ok) info.textContent = from && to ? "“From” is after “To” — swap the dates." : "Pick both dates.";
+    else if (!rows.length) info.textContent = "No price tables took effect in this range.";
+    else info.textContent = `${rows.length} price table${rows.length === 1 ? "" : "s"} · ${dayLabel(rows[0].date)} → ${dayLabel(rows[rows.length - 1].date)}`;
+    btn.disabled = !ok || rows.length === 0;
+    for (const c of document.querySelectorAll(".xl .chip")) {
+      const r = presetRange(c.dataset.range);
+      c.setAttribute("aria-pressed", String(!!r && r[0] === from && r[1] === to));
+    }
+  }
+
+  function presetRange(kind) {
+    const h = (state.data && state.data.history) || [];
+    if (!h.length) return null;
+    const last = h[h.length - 1].date, first = h[0].date, today = isoToday();
+    if (kind === "all") return [first, last];
+    if (kind === "month") { const m = today.slice(0, 7); return [`${m}-01` < first ? first : `${m}-01`, last]; }
+    if (kind === "30") { const a = addDaysIso(today, -29); return [a < first ? first : a, last]; }
+    return null;
+  }
+
+  for (const id of ["xlFrom", "xlTo"]) {
+    $(id).addEventListener("input", () => {
+      $("xlFrom").dataset.touched = "1";
+      const h = (state.data && state.data.history) || [];
+      $("xlTo").dataset.followLatest = h.length && $("xlTo").value === h[h.length - 1].date ? "1" : "0";
+      updateExportInfo();
+    });
+  }
+  $("xl").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    const r = presetRange(c.dataset.range);
+    if (!r) return;
+    $("xlFrom").value = r[0]; $("xlTo").value = r[1];
+    $("xlFrom").dataset.touched = c.dataset.range === "all" ? "" : "1";
+    $("xlTo").dataset.followLatest = "1";
+    updateExportInfo();
+  });
+
+  $("xlBtn").addEventListener("click", () => {
+    const { from, to, ok, rows } = exportRange();
+    if (!ok || !rows.length) return;
+    const all = state.data.history;
+    const cells = rows.slice().reverse().map((t) => {         // newest first, like the page
+      const prev = all[all.findIndex((x) => x.date === t.date) - 1] || {};
+      const row = [{ t: "d", v: excelDate(t.date) }];
+      for (const [k] of FUEL_COLS) {
+        row.push(t[k] != null ? { t: "n", v: t[k] } : null);
+        row.push(t[k] != null && prev[k] != null && t[k] !== prev[k] ? { t: "n", v: t[k] - prev[k] } : null);
+      }
+      return row;
+    });
+    const blob = xlsx.sheet("Fuel Price History",
+      ["In force from", ...FUEL_COLS.flatMap(([, a, b]) => [a, b])], cells, [16, 18, 15, 18, 15, 18, 15, 20, 15]);
+    const url = URL.createObjectURL(blob);
+    const a = el("a", { href: url, download: `fuel-price-history_${from}_to_${to}.xlsx` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
   /* ---------- "Refresh Prices" ---------- */
   let resetTimer = null;
   $("updateBtn").addEventListener("click", async () => {
@@ -528,7 +808,7 @@
       msg = body.status === "updated" ? "New prices recorded"
         : body.status === "failed" ? "IPT unreachable"
         : "Already up to date";
-      await load({ fresh: true });
+      await Promise.all([load({ fresh: true }), loadOct(state.oct.from)]);
     } catch { msg = "Couldn't update"; }
     btn.disabled = false; btn.classList.remove("spin"); text.textContent = msg;
     clearTimeout(resetTimer);
@@ -548,8 +828,9 @@
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.data && renderChart(), 120); });
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && state.data && Date.now() - state.loadedAt > 10 * 60 * 1000) load();
+    if (document.visibilityState === "visible" && state.data && Date.now() - state.loadedAt > 10 * 60 * 1000) { load(); loadOct(state.oct.from); }
   });
 
   load();
+  loadOct();
 })();

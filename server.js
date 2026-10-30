@@ -20,6 +20,7 @@ const routes = {
   "/api/summary": require("./api/summary"),
   "/api/prices": require("./api/prices"),
   "/api/rate": require("./api/rate"),
+  "/api/period": require("./api/period"),
   "/api/refresh": require("./api/refresh"),
   "/api/health": require("./api/health"),
 };

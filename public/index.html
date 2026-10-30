@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>TransportIQ Lebanon</title>
+  <title>Transport Lebanon</title>
   <meta name="description" content="Official IPT fuel prices in Lebanon and the fuel-indexed transportation allowance, month by month.">
   <meta name="theme-color" content="#0f2a4d">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -18,7 +18,7 @@
           <svg viewBox="0 0 24 24" width="26" height="26"><path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h6A1.5 1.5 0 0 1 14 5.5V20M4 20h11M7 8h5v3H7zM14 10h2a1.5 1.5 0 0 1 1.5 1.5v4a1.25 1.25 0 0 0 2.5 0V9l-2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
         <div>
-          <h1>TransportIQ <span>Lebanon</span></h1>
+          <h1>Transport <span>Lebanon</span></h1>
           <p>Fuel Prices &amp; Transportation Allowance Calculator</p>
         </div>
       </div>
@@ -42,7 +42,7 @@
 
   <main class="wrap">
     <div class="intro">
-      <h2>Welcome to TransportIQ Lebanon</h2>
+      <h2>Welcome to Transport Lebanon</h2>
       <p>Get the latest fuel prices and calculate transportation allowances easily and accurately.</p>
     </div>
 
@@ -173,14 +173,6 @@
             <p class="compare muted small" id="oldLine"></p>
 
             <div class="used" id="usedBox"></div>
-
-            <div class="note-box">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>
-              <div>
-                <p class="note-title">Note</p>
-                <p class="small" id="noteText">This calculation is based on the official IPT fuel prices and the company's transportation terms. Prices are only used to set the rate — they are not printed on the payslip.</p>
-              </div>
-            </div>
           </section>
         </div>
       </div>
@@ -202,7 +194,7 @@
           <a class="link small" href="#history">View full history →</a>
         </section>
 
-        <section class="card panel" aria-labelledby="h-actions">
+        <section class="card panel" id="actionsCard" aria-labelledby="h-actions">
           <div class="panel-head">
             <h3 id="h-actions"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/></svg>Quick Actions</h3>
           </div>
@@ -221,37 +213,90 @@
             </button>
           </div>
         </section>
+
+        <!-- October calculator: pick the date the new terms start -->
+        <section class="card panel oct" id="octCalc" aria-labelledby="h-oct">
+          <div class="panel-head row">
+            <h3 id="h-oct"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"/></svg>October Calculator</h3>
+            <span class="badge blue" id="octBadge">—</span>
+          </div>
+
+          <div class="oct-pick">
+            <label for="octFrom">New terms start on</label>
+            <button class="link-btn" id="octWhole" type="button">Whole month</button>
+            <input class="date-input" id="octFrom" type="date" aria-describedby="octHow">
+          </div>
+
+          <div class="oct-chips" id="octChips" role="group" aria-label="Start from a price change"></div>
+
+          <div class="table-wrap oct-wrap">
+            <table class="grid oct-grid" aria-live="polite">
+              <thead><tr><th>Period</th><th class="num">Days</th><th class="num">Total</th></tr></thead>
+              <tbody id="octBody"></tbody>
+              <tfoot><tr><th>Total</th><th class="num" id="octDays">—</th><th class="num" id="octTotal">—</th></tr></tfoot>
+            </table>
+          </div>
+
+          <div class="oct-avg">
+            <span>Average per day</span>
+            <b><span id="octAvg">—</span> <small>L.L.</small></b>
+          </div>
+          <p class="oct-emp muted small" id="octEmp" hidden></p>
+
+          <p class="oct-how muted small" id="octHow"></p>
+          <p class="oct-foot muted small"><span id="octFoot"></span> <button class="link-btn" id="octRecheck" type="button">Check IPT</button></p>
+
+          <!-- free space on purpose: add more content here later -->
+          <div class="oct-slot" id="octExtra"></div>
+        </section>
       </aside>
     </div>
 
     <!-- ================= reports ================= -->
     <div class="reports">
-      <section class="card panel" id="reports" aria-labelledby="h-months">
-        <div class="panel-head">
-          <h3 id="h-months"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M10 20V5M15 20v-7M20 20V8"/></svg>Monthly Reports</h3>
-          <p class="muted small" id="monthsSub">Select a month to see its calculation.</p>
-        </div>
-        <div class="table-wrap">
-          <table class="grid" id="monthsTable">
-            <thead><tr><th>Month</th><th class="num">Avg / 20 L</th><th class="num">Per day</th><th class="num" id="thTotal">Transport</th></tr></thead>
-            <tbody id="monthsBody"></tbody>
-          </table>
-        </div>
-      </section>
-
       <section class="card panel" id="history" aria-labelledby="h-history">
         <div class="panel-head">
           <h3 id="h-history"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Fuel Price History</h3>
           <p class="muted small">Official tables by the date they took effect · L.L. per 20 L (LPG per 10 kg).</p>
         </div>
-        <div class="table-wrap scroll">
-          <table class="grid">
-            <thead><tr><th>In force from</th><th class="num">UNL 95</th><th class="num">UNL 98</th><th class="num">Diesel</th><th class="num">Gas (LPG)</th></tr></thead>
-            <tbody id="historyBody"></tbody>
-          </table>
+        <div class="history-body">
+          <div class="table-wrap scroll">
+            <table class="grid">
+              <thead><tr><th>In force from</th><th class="num">UNL 95</th><th class="num">UNL 98</th><th class="num">Diesel</th><th class="num">Gas (LPG)</th></tr></thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Excel export, right beside the table -->
+          <aside class="xl" id="xl" aria-labelledby="h-xl">
+            <span class="xl-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9.5 12.5l5 5M14.5 12.5l-5 5"/></svg></span>
+            <h4 id="h-xl">Export to Excel</h4>
+            <p class="muted small">Choose which price tables to include.</p>
+            <div class="xl-dates">
+              <label>From<input class="date-input" id="xlFrom" type="date"></label>
+              <label>To<input class="date-input" id="xlTo" type="date"></label>
+            </div>
+            <div class="xl-presets" role="group" aria-label="Quick ranges">
+              <button type="button" class="chip" data-range="all">All</button>
+              <button type="button" class="chip" data-range="month">This month</button>
+              <button type="button" class="chip" data-range="30">Last 30 days</button>
+            </div>
+            <p class="xl-info small" id="xlInfo" role="status"></p>
+            <button class="xl-btn" id="xlBtn" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>
+              Download .xlsx
+            </button>
+          </aside>
         </div>
       </section>
     </div>
+    <!-- ================= about ================= -->
+    <section class="card panel about" id="about" aria-labelledby="h-about">
+      <h3 id="h-about">About Transport Lebanon</h3>
+      <p><strong>Transport Lebanon is a practical tool designed to simplify fuel-price monitoring and transportation allowance calculations for businesses and HR professionals across Lebanon.</strong></p>
+      <p><strong>The application aims to make calculations more transparent, help users understand the impact of fuel-price changes, and support more efficient transportation allowance management.</strong></p>
+      <p><strong>Created by Rony Younes, the project combines HR expertise, practical payroll requirements, and digital innovation to address a real business need in the Lebanese market.</strong></p>
+    </section>
   </main>
 
   <!-- ================= footer / about ================= -->

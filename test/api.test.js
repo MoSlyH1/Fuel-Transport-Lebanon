@@ -76,7 +76,7 @@ test("wrong method and unknown paths", async () => {
 test("static files are served and path traversal is blocked", async () => {
   const html = await fetch(base + "/");
   assert.equal(html.status, 200);
-  assert.match(await html.text(), /TransportIQ Lebanon/);
+  assert.match(await html.text(), /Transport Lebanon/);
   assert.equal((await fetch(base + "/app.js")).status, 200);
   assert.equal((await fetch(base + "/style.css")).status, 200);
   // raw paths (fetch would tidy them up before sending)
@@ -90,4 +90,12 @@ test("static files are served and path traversal is blocked", async () => {
   }
   assert.equal(await raw("/a%00b"), 400);
   assert.equal((await fetch(base + "/missing.txt")).status, 404);
+});
+test("period endpoint: whole month and a chosen start date", async () => {
+  const a = await get("/api/period");
+  assert.equal(a.r.status, 200);
+  assert.equal(a.j.from, "2026-10-02");
+  const b = await get("/api/period?from=2026-10-09");
+  assert.deepEqual(b.j.rows.map((r) => r.key), ["old", "new"]);
+  assert.equal((await get("/api/period?from=abc")).r.status, 400);
 });

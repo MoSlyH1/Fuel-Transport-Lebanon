@@ -54,9 +54,9 @@ test("IPT price is recorded in PostgreSQL, survives a restart, and moves the rat
     assert.equal(f.diesel.price, 2_500_000);
     assert.equal(f.lpg.price, 1_500_000);
     assert.equal(f.unl95.change, -39_000);
-    // Oct 1–24 with the new table in force for 23–24 Oct
+    // the live 23 Oct table replaces the seed one in the average
     const seg = j.rate.segments.at(-1);
-    assert.deepEqual([seg.from, seg.to, seg.days, seg.unl95], ["2026-10-23", "2026-10-24", 2, 2_700_000]);
+    assert.deepEqual([seg.tableDate, seg.unl95], ["2026-10-23", 2_700_000]);
 
     const rows = (await pg.query("SELECT to_char(price_date,'YYYY-MM-DD') d, unl95, diesel, lpg, source FROM fuel_price_history WHERE price_date >= '2026-10-20' ORDER BY 1")).rows;
     assert.deepEqual(rows.map((r) => r.d), ["2026-10-23"]);

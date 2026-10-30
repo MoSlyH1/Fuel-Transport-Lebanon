@@ -37,7 +37,8 @@ test("history: live reading replaces seed; identical live reading is not a chang
   assert.equal(again.write, false);     // nothing new; older fields kept
   const next = history.record("2026-10-23", { unl95: 2_700_000, unl98: 2_718_000, diesel: 2_500_000, lpg: 1_494_000 }, "IPT Group (live)");
   assert.deepEqual(next, { write: true, changed: true });
-  assert.equal(history.all().at(-1).date, "2026-10-23");
+  assert.equal(history.all().find((t) => t.date === "2026-10-23").unl95, 2_700_000); // replaced the seed row
+  assert.equal(history.all().at(-1).date, "2026-10-30");
   assert.equal(history.record("garbage", { unl95: 1 }, "x").write, false);
   assert.equal(history.record("2026-10-24", { unl95: 12 }, "x").write, false); // absurd quote rejected
 });
