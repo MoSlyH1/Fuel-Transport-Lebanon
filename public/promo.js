@@ -1,10 +1,13 @@
 /* =====================================================================
    promo.js — the "Get full access" gate.
 
-   • On the main link (/) the ad appears FIRST_DELAY_MS (30 s) after the
-     page opens. It cannot be closed and stays on screen.
-   • Nothing is stored in the browser, so refreshing, clearing the cache
-     or using a private window just starts the same 30 seconds again.
+   • The first time a visitor opens the main link (/), a 30-second clock
+     starts. When it runs out the ad appears and cannot be closed.
+   • Refreshing does NOT restart the clock. The moment the page loads the
+     ad is shown if 30 s have passed since the first visit, otherwise it
+     appears when the remaining time is up.
+   • Clearing the browser data starts a fresh 30 seconds — so the visitor
+     never gets more than 30 s of use before the ad.
    • On a full-access link (any path listed in vercel.json "rewrites")
      the ad never shows.
 
@@ -15,13 +18,10 @@
   "use strict";
 
   // ---- the only setting ----
-  var FIRST_DELAY_MS = 30 * 1000;      // 30 seconds after the page opens
+  var FIRST_DELAY_MS = 30 * 1000;      // 30 seconds after the first visit
 
   var path = location.pathname.replace(/\/+$/, "") || "/";
   var fullAccess = path !== "/" && path !== "/index.html";
-
-  // clean up anything an earlier version stored
-  try { localStorage.removeItem("promo.nextAt"); localStorage.removeItem("promo.open"); } catch (e) {}
 
   if (fullAccess) {
     document.documentElement.classList.add("full-access");
@@ -32,6 +32,29 @@
   if (!ad) return;
   var card = ad.querySelector(".promo-card");
   var shown = false;
+
+  // ---- remember WHEN the visitor first arrived (localStorage, cookie as backup) ----
+  var KEY = "promo.start";
+  function readStart() {
+    var v = null;
+    try { v = localStorage.getItem(KEY); } catch (e) {}
+    if (!v) {
+      var m = document.cookie.match(/(?:^|; )promo_start=(\d+)/);
+      if (m) v = m[1];
+    }
+    return Number(v) || 0;
+  }
+  function saveStart(t) {
+    try { localStorage.setItem(KEY, String(t)); } catch (e) {}
+    try { document.cookie = "promo_start=" + t + "; max-age=31536000; path=/; SameSite=Lax"; } catch (e) {}
+  }
+
+  var now = Date.now();
+  var start = readStart();
+  if (!start || start > now) {          // first visit (or a clock that went backwards)
+    start = now;
+    saveStart(start);
+  }
 
   function show() {
     shown = true;
@@ -50,5 +73,7 @@
     if (shown && !ad.contains(e.target) && card) card.focus();
   });
 
-  setTimeout(show, FIRST_DELAY_MS);
+  var wait = start + FIRST_DELAY_MS - now;
+  if (wait <= 0) show();                 // time already used up → show straight away
+  else setTimeout(show, wait);
 })();

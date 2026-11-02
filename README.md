@@ -87,10 +87,11 @@ API: `GET /api/summary?month=2026-10&days=26&employees=1` returns everything the
 
 ## "Get full access" ad & the no-ad link
 
-- **Main link** `https://fuel-transport-lebanon.vercel.app` → 30 seconds after the page opens, a popup shows Rony's
-  photo, WhatsApp (+961 70 953 864) and LinkedIn. It cannot be closed and nothing is saved in the browser, so
-  refreshing or clearing the cache just starts the same 30 seconds again. Change the delay with `FIRST_DELAY_MS`
-  at the top of `public/promo.js`.
+- **Main link** `https://fuel-transport-lebanon.vercel.app` → the first time a visitor opens it, a 30-second clock
+  starts. When it ends, a popup shows Rony's photo, WhatsApp (+961 70 953 864) and LinkedIn. It cannot be closed.
+  Refreshing does not restart the clock: after the 30 seconds the ad shows immediately on every load.
+  Clearing the browser data gives a fresh 30 seconds. Change the delay with `FIRST_DELAY_MS` at the top of
+  `public/promo.js` (and bump the `?v=` number on the script tag in `index.html` so browsers fetch the new file).
 - **Full-access link** (no ad) → currently `https://fuel-transport-lebanon.vercel.app/adminstrator`.
 
 ### Change the full-access link (do this from time to time)
@@ -104,7 +105,7 @@ page's code, so users can't discover it.
 ]
 ```
 
-1. Replace `/adminstrator` with the new word, e.g. `/fullaccess`, `/mainentrance`, `/k7-nov26`.
+1. Replace `/fullaccesstopage` with the new word, e.g. `/fullaccess`, `/mainentrance`, `/k7-nov26`.
 2. Commit & push → Vercel redeploys in ~1 minute.
 3. The old link now shows "Not found"; send the new link to paying users.
 

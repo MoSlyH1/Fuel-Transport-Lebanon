@@ -320,14 +320,11 @@
 
   <!-- ================= "full access" ad (shown on the main link only) ================= -->
   <div class="promo" id="promo" role="dialog" aria-modal="true" aria-labelledby="promoTitle" hidden>
-    <div class="promo-card">
-      <button class="promo-x" id="promoClose" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
-      </button>
+    <div class="promo-card" tabindex="-1">
       <img class="promo-photo" src="/rony.jpg" alt="Rony Younes" width="112" height="112">
-      <p class="promo-eyebrow">Free preview</p>
+      <p class="promo-eyebrow">Preview ended</p>
       <h2 class="promo-title" id="promoTitle">Get full access</h2>
-      <p class="promo-text">Enjoying Transport Lebanon? Contact <strong>Rony Younes</strong> to get your full-access link — no more interruptions.</p>
+      <p class="promo-text">Enjoying Transport Lebanon? Contact <strong>Rony Younes</strong> to get your full-access link and continue using the app.</p>
       <div class="promo-actions">
         <a class="promo-btn wa" href="https://wa.me/96170953864?text=Hello%20Rony%2C%20I%20would%20like%20full%20access%20to%20Transport%20Lebanon." target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.2-3.6A8 8 0 1 1 8 19z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1-1.4-1.8-.9-.8.8a4 4 0 0 1-2.4-2.4l.8-.8-.9-1.8z"/></svg>
@@ -343,6 +340,6 @@
 
   <noscript><p class="wrap">This page needs JavaScript to calculate.</p></noscript>
   <script src="/app.js" defer></script>
-  <script src="/promo.js" defer></script>
+  <script src="/promo.js?v=3" defer></script>
 </body>
 </html>
