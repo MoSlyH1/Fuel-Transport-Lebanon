@@ -84,3 +84,38 @@ API: `GET /api/summary?month=2026-10&days=26&employees=1` returns everything the
 ## Notes
 - Petrol/diesel are quoted per 20 L; LPG per 10 kg cylinder.
 - Prices are only used to set the rate; they are not meant for the payslip.
+
+## "Get full access" ad & the no-ad link
+
+- **Main link** `https://fuel-transport-lebanon.vercel.app` → after 1 minute a popup shows Rony's photo,
+  WhatsApp (+961 70 953 864) and LinkedIn. Closing it brings it back 3 minutes later.
+  Timings are at the top of `public/promo.js` (`FIRST_DELAY_MS`, `REPEAT_MS`).
+- **Full-access link** (no ad) → currently `https://fuel-transport-lebanon.vercel.app/adminstrator`.
+
+### Change the full-access link (do this from time to time)
+
+The link lives in **one place only: `vercel.json` → `rewrites`**. It is not written anywhere in the
+page's code, so users can't discover it.
+
+```json
+"rewrites": [
+  { "source": "/fullaccessforpage", "destination": "/index.html" }
+]
+```
+
+1. Replace `/adminstrator` with the new word, e.g. `/fullaccess`, `/mainentrance`, `/k7-nov26`.
+2. Commit & push → Vercel redeploys in ~1 minute.
+3. The old link now shows "Not found"; send the new link to paying users.
+
+To keep several links working at once (e.g. a grace week for old users), add more lines:
+
+```json
+"rewrites": [
+  { "source": "/mainentrance", "destination": "/index.html" },
+  { "source": "/fullaccess",   "destination": "/index.html" }
+]
+```
+
+The Docker/local server reads the same list from `vercel.json`, so nothing else needs changing.
+Note: this hides an ad, it is not a password — anyone who is given the link can share it, which is
+why rotating it regularly matters.

@@ -16,6 +16,16 @@ const db = require("./lib/db");
 const PORT = Number(process.env.PORT || 3000);
 const PUBLIC = path.join(__dirname, "public");
 
+// Full-access (no-ad) links: read from vercel.json "rewrites" so the local /
+// Docker server and Vercel always use the same links. Change them there only.
+const FULL_ACCESS = new Set();
+try {
+  const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, "vercel.json"), "utf8"));
+  for (const r of cfg.rewrites || []) {
+    if (r.destination === "/index.html") FULL_ACCESS.add(r.source.replace(/\/+$/, ""));
+  }
+} catch { /* no vercel.json — main link only */ }
+
 const routes = {
   "/api/summary": require("./api/summary"),
   "/api/prices": require("./api/prices"),
@@ -52,7 +62,7 @@ function serveStatic(req, res, pathname) {
   let rel;
   try { rel = decodeURIComponent(pathname); } catch { res.writeHead(400); return res.end(); }
   if (rel.includes("\0")) { res.writeHead(400); return res.end(); }
-  if (rel === "/") rel = "/index.html";
+  if (rel === "/" || FULL_ACCESS.has(rel.replace(/\/+$/, ""))) rel = "/index.html";
 
   const file = path.normalize(path.join(PUBLIC, rel));
   if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
