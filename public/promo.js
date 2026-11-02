@@ -1,25 +1,27 @@
 /* =====================================================================
-   promo.js — the "Get full access" ad.
+   promo.js — the "Get full access" gate.
 
-   • On the main link (/) the ad pops up after FIRST_DELAY_MS and comes
-     back every REPEAT_MS after it is closed.
+   • On the main link (/) the ad appears FIRST_DELAY_MS (30 s) after the
+     page opens. It cannot be closed and stays on screen.
+   • Nothing is stored in the browser, so refreshing, clearing the cache
+     or using a private window just starts the same 30 seconds again.
    • On a full-access link (any path listed in vercel.json "rewrites")
      the ad never shows.
 
    The full-access links themselves are NOT in this file — they live only
    in vercel.json, so nobody can find them by reading the page's code.
-   Any path that is not "/" or "/index.html" but still loads this page
-   can only be one of those links (every other path is a 404).
    ===================================================================== */
 (function () {
   "use strict";
 
-  // ---- settings you can change ----
-  var FIRST_DELAY_MS = 60 * 1000;      // first popup: 1 minute after opening
-  var REPEAT_MS = 3 * 60 * 1000;       // shows again 3 minutes after closing (0 = never again)
+  // ---- the only setting ----
+  var FIRST_DELAY_MS = 30 * 1000;      // 30 seconds after the page opens
 
   var path = location.pathname.replace(/\/+$/, "") || "/";
   var fullAccess = path !== "/" && path !== "/index.html";
+
+  // clean up anything an earlier version stored
+  try { localStorage.removeItem("promo.nextAt"); localStorage.removeItem("promo.open"); } catch (e) {}
 
   if (fullAccess) {
     document.documentElement.classList.add("full-access");
@@ -28,34 +30,25 @@
 
   var ad = document.getElementById("promo");
   if (!ad) return;
-  var closeBtn = document.getElementById("promoClose");
-  var lastFocus = null;
-  var timer = null;
+  var card = ad.querySelector(".promo-card");
+  var shown = false;
 
-  function open() {
-    lastFocus = document.activeElement;
+  function show() {
+    shown = true;
     ad.hidden = false;
     document.body.classList.add("promo-open");
-    closeBtn.focus();
+    if (card) card.focus();
   }
 
-  function close() {
-    ad.hidden = true;
-    document.body.classList.remove("promo-open");
-    if (lastFocus && lastFocus.focus) lastFocus.focus();
-    if (REPEAT_MS > 0) schedule(REPEAT_MS);
-  }
+  // if someone hides the ad again (e.g. by editing the page), put it back
+  new MutationObserver(function () {
+    if (shown && ad.hidden) ad.hidden = false;
+  }).observe(ad, { attributes: true, attributeFilter: ["hidden"] });
 
-  function schedule(ms) {
-    clearTimeout(timer);
-    timer = setTimeout(open, ms);
-  }
-
-  closeBtn.addEventListener("click", close);
-  ad.addEventListener("click", function (e) { if (e.target === ad) close(); });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !ad.hidden) close();
+  // keep keyboard focus inside the ad once it is showing
+  document.addEventListener("focusin", function (e) {
+    if (shown && !ad.contains(e.target) && card) card.focus();
   });
 
-  schedule(FIRST_DELAY_MS);
+  setTimeout(show, FIRST_DELAY_MS);
 })();

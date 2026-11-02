@@ -87,9 +87,10 @@ API: `GET /api/summary?month=2026-10&days=26&employees=1` returns everything the
 
 ## "Get full access" ad & the no-ad link
 
-- **Main link** `https://fuel-transport-lebanon.vercel.app` → after 1 minute a popup shows Rony's photo,
-  WhatsApp (+961 70 953 864) and LinkedIn. Closing it brings it back 3 minutes later.
-  Timings are at the top of `public/promo.js` (`FIRST_DELAY_MS`, `REPEAT_MS`).
+- **Main link** `https://fuel-transport-lebanon.vercel.app` → 30 seconds after the page opens, a popup shows Rony's
+  photo, WhatsApp (+961 70 953 864) and LinkedIn. It cannot be closed and nothing is saved in the browser, so
+  refreshing or clearing the cache just starts the same 30 seconds again. Change the delay with `FIRST_DELAY_MS`
+  at the top of `public/promo.js`.
 - **Full-access link** (no ad) → currently `https://fuel-transport-lebanon.vercel.app/adminstrator`.
 
 ### Change the full-access link (do this from time to time)
@@ -99,7 +100,7 @@ page's code, so users can't discover it.
 
 ```json
 "rewrites": [
-  { "source": "/fullaccessforpage", "destination": "/index.html" }
+  { "source": "/fullaccesstopage", "destination": "/index.html" }
 ]
 ```
 
