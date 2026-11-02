@@ -89,7 +89,7 @@ API: `GET /api/summary?month=2026-10&days=26&employees=1` returns everything the
 
 - **Main link** `https://fuel-transport-lebanon.vercel.app` → the first time a visitor opens it, a 30-second clock
   starts. When it ends, a popup shows Rony's photo, WhatsApp (+961 70 953 864) and LinkedIn. It cannot be closed.
-  Refreshing does not restart the clock: after the 30 seconds the ad shows immediately on every load.
+  Refreshes and new tabs use the same clock: after the 30 seconds the ad shows immediately on every load, in every tab.
   Clearing the browser data gives a fresh 30 seconds. Change the delay with `FIRST_DELAY_MS` at the top of
   `public/promo.js` (and bump the `?v=` number on the script tag in `index.html` so browsers fetch the new file).
 - **Full-access link** (no ad) → currently `https://fuel-transport-lebanon.vercel.app/adminstrator`.
