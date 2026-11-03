@@ -14,7 +14,7 @@ Vanilla JS front end · Node.js back end · PostgreSQL · Docker · Vercel-ready
 ```
 average price / 20 L = (sum of the price tables) ÷ (number of tables)   — each table counts once
 price of 1 litre     = average ÷ 20
-daily rate           = 5 × price of 1 litre → rounded to 1,000 → kept within 500,000–800,000
+daily rate           = 5 × price of 1 litre (exact, not rounded) → kept within 500,000–800,000
 transportation       = days worked × daily rate  (× employees)
 ```
 
