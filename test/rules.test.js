@@ -16,9 +16,9 @@ test("October 2026 (main calculator) averages the WHOLE month, not just from the
   assert.equal(c.averagedFrom, "2026-10-02");
   assert.equal(c.avgQuote20L, 16_771_000 / 6);
   assert.ok(Math.abs(c.rawPerDay - 698_791.67) < 0.01);
-  assert.equal(c.fuelRatePerDay, 699_000);           // 698,791.67 → rounded to the nearest 1,000
+  assert.equal(c.fuelRatePerDay, 700_000);           // 139,758 per litre → 140,000 → × 5
   assert.deepEqual([c.oldDays, c.newDays], [21, 10]);
-  assert.equal(c.ratePerDay, 699_000);
+  assert.equal(c.ratePerDay, 700_000);
   assert.equal(c.clamped, null);
 });
 
@@ -80,10 +80,12 @@ test("floor of 500,000 and cap of 800,000 apply", () => {
   assert.equal(R.rateFromAverageQuote(2_800_000).ratePerDay, 700_000);
 });
 
-test("daily rate is rounded to the nearest 1,000 L.L.", () => {
+test("the price of 1 litre is rounded to the nearest 1,000, then × 5", () => {
   assert.equal(R.rateFromAverageQuote(2_738_000).ratePerDay, 685_000); // 684,500 → up
   assert.equal(R.rateFromAverageQuote(2_739_000).ratePerDay, 685_000); // 684,750
-  assert.equal(R.rateFromAverageQuote(2_737_000).ratePerDay, 684_000); // 684,250 → down
+  assert.equal(R.rateFromAverageQuote(2_737_000).ratePerDay, 685_000); // 136,850 → 137,000
+  assert.equal(R.rateFromAverageQuote(2_758_500).perLitreRounded, 138_000); // 137,925 → 138,000
+  assert.equal(R.rateFromAverageQuote(2_758_500).ratePerDay, 690_000);
 });
 
 test("future month = estimate from the latest price; days are not invented", () => {
@@ -133,12 +135,12 @@ test("October calculator: whole month = 1 Oct at 450K + 8 tables → 690,000 × 
 test("October calculator: from 9 Oct → 450K before, fuel rate after, full average", () => {
   const c = R.calculatePeriod("2026-10-09", tables, "2026-10-30");
   assert.equal(c.count, 6);                          // 9, 13, 16, 20, 23, 30 Oct
-  assert.equal(c.ratePerDay, 684_000);               // 2,734,333 ÷ 20 × 5 = 683,583.33 → 684,000
+  assert.equal(c.ratePerDay, 685_000);               // 136,717 per litre → 137,000 → × 5
   assert.deepEqual(c.rows.map((r) => [r.from, r.to, r.days, r.ratePerDay, r.total]), [
     ["2026-10-01", "2026-10-08", 7, 450_000, 3_150_000],
-    ["2026-10-09", "2026-10-31", 19, 684_000, 12_996_000]]);
-  assert.equal(c.total, 16_146_000);                 // 7 × 450,000 + 19 × 684,000
-  assert.equal(c.avgPerDay, 621_000);
+    ["2026-10-09", "2026-10-31", 19, 685_000, 13_015_000]]);
+  assert.equal(c.total, 16_165_000);                 // 7 × 450,000 + 19 × 685,000
+  assert.equal(c.avgPerDay, 622_000);
   assert.deepEqual(c.chips.map((x) => x.date.slice(8)), ["02", "06", "09", "13", "16", "20", "23", "27", "30"]);
   assert.equal(c.chips.find((x) => x.date === "2026-10-27").published, false); // button even without a table
   assert.equal(R.calculatePeriod("2026-10-27", tables, "2026-10-30").count, 2); // 23 Oct price in force + 30 Oct
@@ -175,5 +177,5 @@ test("October calculator: starting on the 22nd uses the WHOLE-month average", ()
   assert.equal(c.ratePerDay, 690_000);                // not 670,000
   assert.deepEqual(c.rows.map((r) => [r.key, r.days, r.ratePerDay]), [["old", 18, 450_000], ["new", 8, 690_000]]);
   assert.equal(c.total, 13_620_000);                  // 18 × 450,000 + 8 × 690,000
-  assert.equal(c.avgPerDay, 523_846);                 // total ÷ 26 days
+  assert.equal(c.avgPerDay, 524_000);                 // 523,846 → nearest 1,000                 // total ÷ 26 days
 });
