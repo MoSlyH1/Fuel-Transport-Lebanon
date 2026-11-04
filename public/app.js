@@ -179,7 +179,7 @@
     const { rate: r, rule } = state.data;
     $("fFuel").textContent = rule.fuel;
     $("fLitres").textContent = `${rule.litresPerDay} litres`;
-    $("fRounding").textContent = "None (exact average)";
+    $("fRounding").textContent = "Nearest 1,000 L.L.";
     $("fEffective").textContent = dayLabel(rule.newRuleStart);
     $("fMethod").textContent = r.legacy ? `Fixed (${fmt(rule.legacyPerDay)} L.L. / day)` : "Fuel-indexed (by official price)";
 
@@ -214,7 +214,8 @@
       drow(`Average price per litre (${rule.fuel})`, `${fmt(r.avgPerLitre)} L.L.`,
         `${fmt(r.avgQuote20L)} per ${rule.litresPerQuote} L ÷ ${rule.litresPerQuote}`),
       drow("Daily consumption", `${rule.litresPerDay} litres`),
-      drow("Calculated daily amount", `${fmt(r.rawPerDay)} L.L.`));
+      drow("Calculated daily amount", `${fmt(r.rawPerDay)} L.L.`),
+      drow("Rounded to the nearest 1,000", `${fmt(r.roundedPerDay)} L.L.`));
     if (r.clamped) {
       body.append(drow(r.clamped === "min" ? "Raised to the minimum" : "Capped at the maximum",
         `${signed(r.fuelRatePerDay - r.roundedPerDay)} L.L.`));
@@ -241,7 +242,7 @@
 
     $("rateSub").textContent =
       `Calculated using the average of the official ${rule.fuel} price tables for ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.count} price${r.count === 1 ? "" : "s"}), ` +
-      `multiplied by ${rule.litresPerDay} litres per day, (not rounded) and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
+      `multiplied by ${rule.litresPerDay} litres per day, rounded to the nearest 1,000 L.L. and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
   }
 
   /* breakdown rows are rebuilt only when the month changes, so typing keeps focus */

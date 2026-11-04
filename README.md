@@ -14,7 +14,7 @@ Vanilla JS front end · Node.js back end · PostgreSQL · Docker · Vercel-ready
 ```
 average price / 20 L = (sum of the price tables) ÷ (number of tables)   — each table counts once
 price of 1 litre     = average ÷ 20
-daily rate           = 5 × price of 1 litre (exact, not rounded) → kept within 500,000–800,000
+daily rate           = 5 × price of 1 litre rounded to the nearest 1,000 → kept within 500,000–800,000
 transportation       = days worked × daily rate  (× employees)
 ```
 
@@ -24,7 +24,7 @@ a future month is an estimate from the latest table. Constants live in `lib/rule
 
 October 2026 has split: days before 22 Oct at **450,000** + days from 22 Oct at the fuel rate (**500K – 800K**).
 
-Check: tables of 20 Oct (2,739,000) and 23 Oct (2,686,000) → average 2,712,500 → 678,125 → **678,000 / day** → 26 days = **17,628,000 L.L.**
+Check (full October, 2 → 30 Oct, 8 tables): 22,068,000 ÷ 8 = 2,758,500 → 689,625 → **690,000 / day** (rounded to the nearest 1,000).
 
 ## October calculator (side card)
 
