@@ -119,31 +119,31 @@ test("employees multiply the payslip line", () => {
   assert.equal(R.payslipLine(700_000, 0, 1).total, 0);
 });
 
-test("October calculator: whole month = 1 Oct at 450K + 8 tables → 690,000 × 25 days", () => {
+test("October calculator: whole month = 1 Oct at 450K + 9 tables → 685,000 × 25 days", () => {
   const c = R.calculatePeriod(undefined, tables, "2026-10-30");
   assert.equal(c.from, "2026-10-02");
-  assert.equal(c.count, 8);
-  assert.equal(c.avgQuote20L, 2_758_500);
-  assert.equal(c.ratePerDay, 690_000);               // 2,758,500 ÷ 20 × 5 = 689,625 → 690,000
+  assert.equal(c.count, 9);                          // incl. the 27 Oct table
+  assert.equal(c.avgQuote20L, 2_746_555.5555555555);
+  assert.equal(c.ratePerDay, 685_000);               // 137,328 per litre → 137,000 → × 5
   assert.deepEqual(c.rows.map((r) => [r.key, r.from, r.to, r.days, r.ratePerDay, r.total]), [
     ["old", "2026-10-01", "2026-10-01", 1, 450_000, 450_000],     // 1 Oct counts at 450K
-    ["new", "2026-10-02", "2026-10-31", 25, 690_000, 17_250_000]]);
+    ["new", "2026-10-02", "2026-10-31", 25, 685_000, 17_125_000]]);
   assert.equal(c.totalDays, 26);                      // Mon–Sat = 27, a pay month is 26
-  assert.equal(c.total, 17_700_000);
+  assert.equal(c.total, 17_575_000);
 });
 
 test("October calculator: from 9 Oct → 450K before, fuel rate after, full average", () => {
   const c = R.calculatePeriod("2026-10-09", tables, "2026-10-30");
-  assert.equal(c.count, 6);                          // 9, 13, 16, 20, 23, 30 Oct
-  assert.equal(c.ratePerDay, 685_000);               // 136,717 per litre → 137,000 → × 5
+  assert.equal(c.count, 7);                          // 9, 13, 16, 20, 23, 27, 30 Oct
+  assert.equal(c.ratePerDay, 680_000);
   assert.deepEqual(c.rows.map((r) => [r.from, r.to, r.days, r.ratePerDay, r.total]), [
     ["2026-10-01", "2026-10-08", 7, 450_000, 3_150_000],
-    ["2026-10-09", "2026-10-31", 19, 685_000, 13_015_000]]);
-  assert.equal(c.total, 16_165_000);                 // 7 × 450,000 + 19 × 685,000
-  assert.equal(c.avgPerDay, 622_000);
+    ["2026-10-09", "2026-10-31", 19, 680_000, 12_920_000]]);
+  assert.equal(c.total, 16_070_000);                 // 7 × 450,000 + 19 × 680,000
+  assert.equal(c.avgPerDay, 618_000);
   assert.deepEqual(c.chips.map((x) => x.date.slice(8)), ["02", "06", "09", "13", "16", "20", "23", "27", "30"]);
-  assert.equal(c.chips.find((x) => x.date === "2026-10-27").published, false); // button even without a table
-  assert.equal(R.calculatePeriod("2026-10-27", tables, "2026-10-30").count, 2); // 23 Oct price in force + 30 Oct
+  assert.equal(c.chips.find((x) => x.date === "2026-10-27").published, true);
+  assert.equal(R.calculatePeriod("2026-10-27", tables, "2026-10-30").count, 2); // 27 Oct + 30 Oct
 });
 
 test("October calculator: dates are clamped, limits apply, weekends are not working days", () => {
@@ -162,30 +162,25 @@ test("October calculator: dates are clamped, limits apply, weekends are not work
 test("October calculator: whole month on the new average only (no 450K days)", () => {
   const c = R.calculatePeriod(undefined, tables, "2026-10-30", { newOnly: true });
   assert.equal(c.mode, "new");
-  assert.equal(c.ratePerDay, 690_000);                // same 8 prices as the whole-month average
-  assert.deepEqual(c.rows.map((r) => [r.key, r.from, r.to, r.days, r.total]), [["new", "2026-10-01", "2026-10-31", 26, 17_940_000]]);
-  assert.equal(c.avgPerDay, 690_000);
+  assert.equal(c.ratePerDay, 685_000);                // same 9 prices as the whole-month average
+  assert.deepEqual(c.rows.map((r) => [r.key, r.from, r.to, r.days, r.total]), [["new", "2026-10-01", "2026-10-31", 26, 17_810_000]]);
+  assert.equal(c.avgPerDay, 685_000);
 });
 
 test("October calculator: starting on the 22nd uses the WHOLE-month average", () => {
   const c = R.calculatePeriod("2026-10-22", tables, "2026-10-30");
   const whole = R.calculatePeriod(undefined, tables, "2026-10-30", { newOnly: true });
   assert.equal(c.from, "2026-10-22");
-  assert.equal(c.count, 8);                           // all 8 October tables, not just 20/23/30 Oct
-  assert.equal(c.avgQuote20L, 2_758_500);
+  assert.equal(c.count, 9);                           // all 9 October tables, not just 20/23/27/30 Oct
+  assert.equal(c.avgQuote20L, 2_746_555.5555555555);
   assert.equal(c.ratePerDay, whole.ratePerDay);       // same rate as the whole month
-  assert.equal(c.ratePerDay, 690_000);                // not 670,000
-  assert.deepEqual(c.rows.map((r) => [r.key, r.days, r.ratePerDay]), [["old", 18, 450_000], ["new", 8, 690_000]]);
-  assert.equal(c.total, 13_620_000);                  // 18 × 450,000 + 8 × 690,000
-  assert.equal(c.avgPerDay, 524_000);                 // 523,846 → nearest 1,000                 // total ÷ 26 days
+  assert.equal(c.ratePerDay, 685_000);
+  assert.deepEqual(c.rows.map((r) => [r.key, r.days, r.ratePerDay]), [["old", 18, 450_000], ["new", 8, 685_000]]);
+  assert.equal(c.total, 13_580_000);                  // 18 × 450,000 + 8 × 685,000
+  assert.equal(c.avgPerDay, 522_000);                 // 522,308 → nearest 1,000                 // total ÷ 26 days
 });
 /* ---- the calculator works for every month, not just October ---- */
-const novTables = [
-  ...tables,
-  { date: "2026-11-03", unl95: 2_500_000 },
-  { date: "2026-11-06", unl95: 2_540_000 },
-  { date: "2026-11-10", unl95: 2_560_000 },
-];
+const novTables = tables; // the real tables incl. 3, 6 and 10 Nov
 
 test("monthly calculator: November, whole month = the table in force on 1 Nov + every new table", () => {
   const c = R.calculatePeriod(undefined, novTables, "2026-11-11");
@@ -193,7 +188,7 @@ test("monthly calculator: November, whole month = the table in force on 1 Nov + 
   assert.equal(c.first, "2026-11-01");
   assert.equal(c.from, "2026-11-01");
   assert.equal(c.count, 4);                           // 30 Oct carried in + 3, 6, 10 Nov
-  assert.equal(c.avgQuote20L, (2_611_000 + 2_500_000 + 2_540_000 + 2_560_000) / 4);
+  assert.equal(c.avgQuote20L, (2_611_000 + 2_569_000 + 2_492_000 + 2_445_000) / 4);
   assert.equal(c.rows.length, 1);                     // nothing before the 1st → no previous-rate row
   assert.equal(c.rows[0].key, "new");
   assert.equal(c.totalDays, 26);                      // Mon–Sat = 25 in Nov 2026, a pay month is still 26
@@ -216,7 +211,7 @@ test("monthly calculator: a later start date keeps the days before it at October
 test("monthly calculator: October is untouched, bad months are rejected, and a new month needs no code change", () => {
   const oct = R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-10" });
   assert.equal(oct.from, "2026-10-02");
-  assert.equal(oct.ratePerDay, 690_000);
+  assert.equal(oct.ratePerDay, 685_000);
   assert.equal(oct.totalDays, 26);
   assert.throws(() => R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-09" }), RangeError);
   assert.throws(() => R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-12" }), RangeError); // not started

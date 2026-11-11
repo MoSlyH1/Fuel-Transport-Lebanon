@@ -214,60 +214,31 @@
           </div>
         </section>
 
-        <!-- Monthly calculator (any month from Oct 2026): pick the date the new terms start -->
+        <!-- Daily fuel prices and the month's average -->
         <section class="card panel oct" id="octCalc" aria-labelledby="h-oct">
           <div class="panel-head row">
-            <h3 id="h-oct"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"/></svg>Avg. Fuel Price and Average</h3>
+            <h3 id="h-oct"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"/></svg>Daily Fuel Prices and Average in a Month</h3>
             <span class="badge blue" id="octBadge">—</span>
           </div>
 
           <div class="oct-month">
             <label for="octMonth">Month</label>
-            <select class="date-input" id="octMonth" aria-label="Calculator month"></select>
+            <select class="date-input" id="octMonth" aria-label="Month"></select>
           </div>
-
-          <div class="oct-pick">
-            <label for="octFrom">New terms start on</label>
-            <button class="link-btn" id="octWhole" type="button">Whole month</button>
-            <input class="date-input" id="octFrom" type="date">
-          </div>
-
-          <div class="oct-chips" id="octChips" role="group" aria-label="Start from a price change"></div>
-          <button class="oct-new" id="octNew" type="button" aria-pressed="false">Whole month · new average only</button>
           <p class="oct-err small" id="octErr" hidden></p>
 
+          <div class="oct-avg oct-avg-top">
+            <span>Month's average <small>UNL 95 · per 20 L</small></span>
+            <b><span id="octAvgQuote">—</span> <small>L.L.</small></b>
+          </div>
+
           <div class="table-wrap oct-wrap">
-            <table class="grid oct-grid" aria-live="polite">
-              <thead><tr><th>Period</th><th class="num">Days</th><th class="num">Total</th></tr></thead>
-              <tbody id="octBody"></tbody>
-              <tfoot><tr><th>Total</th><th class="num" id="octDays">—</th><th class="num" id="octTotal">—</th></tr></tfoot>
+            <table class="grid oct-grid oct-ptable" aria-live="polite">
+              <thead><tr><th>In force from</th><th class="num">UNL 95</th><th class="num">Change</th></tr></thead>
+              <tbody id="octPrices"></tbody>
             </table>
           </div>
-
-          <!-- every UNL 95 price table of the month, straight from the source, and their average -->
-          <div class="oct-prices">
-            <h4>Fuel prices <span class="muted small">UNL 95 · L.L. per 20 L</span></h4>
-            <div class="table-wrap oct-wrap">
-              <table class="grid oct-grid oct-ptable">
-                <thead><tr><th>In force from</th><th class="num">Price</th><th class="num">Change</th></tr></thead>
-                <tbody id="octPrices"></tbody>
-                <tfoot>
-                  <tr><th>Average / 20 L <span class="muted small" id="octCount"></span></th><th class="num" colspan="2" id="octAvgQuote">—</th></tr>
-                  <tr><th>Per litre (rounded)</th><th class="num" colspan="2" id="octPerLitre">—</th></tr>
-                  <tr><th>Daily rate · 5 L</th><th class="num" colspan="2" id="octRate">—</th></tr>
-                </tfoot>
-              </table>
-            </div>
-          </div>
-
-          <div class="oct-avg">
-            <span>Average per day</span>
-            <b><span id="octAvg">—</span> <small>L.L.</small></b>
-          </div>
-          <p class="oct-emp muted small" id="octEmp" hidden></p>
-
-          <!-- free space on purpose: add more content here later -->
-          <div class="oct-slot" id="octExtra"></div>
+          <p class="muted small oct-note" id="octNote">New prices appear here as soon as they come out.</p>
         </section>
       </aside>
     </div>

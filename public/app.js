@@ -492,39 +492,23 @@
 
 
   /* =====================================================================
-     Monthly calculator (every month from Oct 2026) — "the new terms start on <date>"
-       days before the date stay at the previous rate (450,000 in Oct 2026, else last month's rate)
-       days from the date use the fuel rate, averaged from the date until today
-     The server does the maths (/api/period); the days stay editable here.
+     Daily fuel prices and the average of the month
+       every UNL 95 price table of the month + the month's average
+     The server does the maths (/api/period); nothing is calculated here.
      ===================================================================== */
-  state.oct = { month: null, from: null, mode: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
+  state.oct = { month: null, data: null, seq: 0 };
 
-  const shortRange = (a, b) => {
-    const [, m1, d1] = part(a), [, m2, d2] = part(b);
-    if (a === b) return `${d1} ${MON[m1 - 1]}`;
-    return m1 === m2 ? `${d1} – ${d2} ${MON[m1 - 1]}` : `${d1} ${MON[m1 - 1]} – ${d2} ${MON[m2 - 1]}`;
-  };
-
-  async function loadOct(from, mode = null, month = state.oct.month) {
+  async function loadOct(month = state.oct.month) {
     const my = ++state.oct.seq;
     try {
-      const res = await fetch(`/api/period?${new URLSearchParams({ ...(month ? { month } : {}), ...(from ? { from } : {}), ...(mode ? { mode } : {}) })}`, { headers: { Accept: "application/json" } });
+      const res = await fetch(`/api/period?${new URLSearchParams({ ...(month ? { month } : {}), mode: "new" })}`, { headers: { Accept: "application/json" } });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error((body && body.error) || `Server error (${res.status})`);
       if (my !== state.oct.seq) return;
-      const o = state.oct;
-      o.data = body;
-      o.month = body.month;
-      o.from = body.from;
-      o.mode = body.mode === "new" ? "new" : null;
-      const key = `${body.month}|${body.from}|${o.mode}`;
-      if (o.daysFor !== key) {                  // a new start date / mode → days go back to the defaults
-        o.daysFor = key;
-        o.days = { old: null, new: null };
-        for (const r of body.rows) o.days[r.key] = r.days;
-      }
+      state.oct.data = body;
+      state.oct.month = body.month;
       $("octErr").hidden = true;
-      renderOct(true);
+      renderOct();
     } catch (e) {
       if (my !== state.oct.seq) return;
       $("octErr").hidden = false;
@@ -532,13 +516,11 @@
         ? e.message : "Couldn't reach the server. Check your connection and try again.";
     }
   }
+  const reloadOct = () => loadOct();
 
-  function renderOct(rebuild) {
-    const o = state.oct, d = o.data;
+  function renderOct() {
+    const d = state.oct.data;
     if (!d) return;
-    const emp = state.employees ?? 1;
-
-    // controls
     const sel = $("octMonth");
     const msig = d.months.map((x) => x.month).join();
     if (sel.dataset.sig !== msig) {
@@ -547,49 +529,9 @@
       for (const x of d.months) sel.append(el("option", { value: x.month, text: x.label }));
     }
     sel.value = d.month;
-    sel.closest(".oct-month").hidden = d.months.length < 2;
-    const inp = $("octFrom");
-    inp.min = d.first; inp.max = d.to;
-    if (document.activeElement !== inp) inp.value = d.from;
-    inp.setAttribute("aria-invalid", "false");
-    $("octWhole").hidden = d.from === d.first && d.mode !== "new";
-    $("octNew").setAttribute("aria-pressed", String(d.mode === "new"));
-    const badge = $("octBadge");
-    badge.textContent = d.status === "complete" ? "full month" : `to ${shortDay(d.to)}`;
+    $("octBadge").textContent = d.status === "complete" ? "full month" : `to ${shortDay(d.to)}`;
 
-    // one chip per IPT price change in the month → start the new average from that table
-    const chips = $("octChips");
-    const csig = d.month + "|" + d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from + "|" + d.mode;
-    if (chips.dataset.sig !== csig) {
-      chips.dataset.sig = csig;
-      clear(chips);
-      for (const c of d.chips) {
-        chips.append(el("button", {
-          type: "button", class: "chip" + (c.published ? "" : " soft"), "data-date": c.date, "aria-pressed": String(d.mode !== "new" && c.date === d.from),
-          disabled: c.future, text: shortDay(c.date),
-          title: c.future ? "Not published yet — available as soon as IPT publishes it" : c.published ? null : "No new table that day — the price in force is used",
-        }));
-      }
-    }
-
-    // rows (rebuilt only when the date / prices change, so typing keeps its focus)
-    const sig = `${d.month}|${d.from}|${d.to}|${d.mode}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
-    const tb = $("octBody");
-    if (rebuild || tb.dataset.sig !== sig) {
-      tb.dataset.sig = sig;
-      clear(tb);
-      for (const r of d.rows) {
-        const isNew = r.key === "new";
-        const input = el("input", { class: "day-input", type: "number", inputmode: "numeric", min: "0", max: "31", step: "1", "data-key": r.key, "aria-label": `Days worked ${shortRange(r.from, r.to)}` });
-        input.value = o.days[r.key] == null ? "" : String(o.days[r.key]);
-        tb.append(el("tr", { class: isNew ? "fuel-row" : "" },
-          el("td", {}, el("span", { class: "per", text: shortRange(r.from, r.to) }),
-            el("span", { class: "sub", text: `${fmt(r.ratePerDay)} / day` })),
-          el("td", { class: "num" }, input),
-          el("td", { class: "num", "data-oct-total": r.key })));
-      }
-    }
-    // every price table of the period (newest first) + the average they give
+    // every price of the month, newest first (the price carried over from the previous month is the first line)
     const pb = $("octPrices");
     clear(pb);
     const segs = d.segments || [];
@@ -597,51 +539,14 @@
       const sg = segs[i], prev = i > 0 ? segs[i - 1] : null;
       const diff = prev ? sg.unl95 - prev.unl95 : null;
       pb.append(el("tr", { class: i === segs.length - 1 ? "fuel-row" : "" },
-        el("td", {}, el("span", { class: "per", text: `${shortDay(sg.tableDate)} ${sg.tableDate.slice(0, 4)}` }),
-          sg.tableDate < d.avgFrom ? el("span", { class: "sub", text: "in force at the start" }) : null),
+        el("td", {}, el("span", { class: "per", text: `${shortDay(sg.tableDate)} ${sg.tableDate.slice(0, 4)}` })),
         el("td", { class: "num", text: fmt(sg.unl95) }),
         el("td", { class: "num " + (diff == null ? "" : diff > 0 ? "up" : diff < 0 ? "down" : ""), text: diff == null ? "—" : diff === 0 ? "0" : (diff > 0 ? "+" : "−") + fmt(Math.abs(diff)) })));
     }
-    $("octCount").textContent = `· ${d.count} price${d.count === 1 ? "" : "s"}`;
-    $("octAvgQuote").textContent = `${fmt(Math.round(d.avgQuote20L))} L.L.`;
-    $("octPerLitre").textContent = `${fmt(d.avgPerLitreRounded)} L.L.`;
-    $("octRate").textContent = `${fmt(d.ratePerDay)} L.L.` + (d.clamped === "min" ? " (minimum)" : d.clamped === "max" ? " (maximum)" : "");
-
-    let days = 0, total = 0, ok = true;
-    for (const r of d.rows) {
-      const n = o.days[r.key];
-      const cell = tb.querySelector(`[data-oct-total="${r.key}"]`);
-      if (n == null) { ok = false; cell.textContent = "—"; continue; }
-      days += n; total += n * r.ratePerDay;
-      cell.textContent = fmt(n * r.ratePerDay);
-    }
-    $("octDays").textContent = ok ? String(days) : "—";
-    $("octTotal").textContent = ok ? fmt(total) : "—";
-    $("octAvg").textContent = ok && days > 0 ? fmt(Math.round(total / days / 1000) * 1000) : "—";
-    const em = $("octEmp");
-    em.hidden = !(ok && emp > 1);
-    if (!em.hidden) em.textContent = `For ${fmt(emp)} employees: ${fmt(total * emp)} L.L.`;
+    $("octAvgQuote").textContent = fmt(Math.round(d.avgQuote20L));
   }
 
-  $("octMonth").addEventListener("change", (e) => loadOct(null, null, e.target.value));
-  $("octFrom").addEventListener("change", (e) => {
-    const v = e.target.value;
-    const d = state.oct.data;
-    if (!v || (d && (v < d.first || v > d.to))) { e.target.setAttribute("aria-invalid", "true"); return; }
-    loadOct(v);
-  });
-  $("octNew").addEventListener("click", () => loadOct(null, "new", state.oct.month));
-  $("octChips").addEventListener("click", (e) => {
-    const c = e.target.closest(".chip");
-    if (c) loadOct(c.dataset.date);
-  });
-  $("octWhole").addEventListener("click", () => state.oct.data && loadOct(state.oct.data.first));
-  $("octBody").addEventListener("input", (e) => {
-    const inp = e.target.closest(".day-input");
-    if (!inp) return;
-    state.oct.days[inp.dataset.key] = readInt(inp, 0, 31);
-    renderOct(false);
-  });
+  $("octMonth").addEventListener("change", (e) => loadOct(e.target.value));
 
   /* =====================================================================
      Fuel Price History → Excel (.xlsx), with a date range
@@ -848,8 +753,6 @@
   let rz = null;
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.data && renderChart(), 120); });
 
-  // reload the calculator keeping the chosen month / start date / mode
-  function reloadOct() { const o = state.oct; return o.mode ? loadOct(null, o.mode) : loadOct(o.from); }
 
   // New prices show up by themselves: the server re-reads the source at most every 10 minutes,
   // and an open page asks again every 5 minutes (and when you come back to the tab).

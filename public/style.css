@@ -498,4 +498,5 @@ body.promo-open { overflow: hidden; }
 @keyframes promo-fade { from { opacity: 0; } }
 @keyframes promo-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } }
 @media (prefers-reduced-motion: reduce) { .promo, .promo-card { animation: none; } }
-@media print { .promo { display: none !important; } }
+@media print { .promo { display: none !important; } }.oct-avg-top { margin: 0 0 10px; }
+.oct-note { margin: 8px 0 0; }
