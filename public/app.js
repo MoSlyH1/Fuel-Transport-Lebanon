@@ -201,9 +201,6 @@
     // calculation details
     const body = $("howBody");
     clear(body);
-    const used = $("usedBox");
-    clear(used);
-    used.hidden = !!r.legacy;
     body.append(el("h4", { text: "Calculation Details" }));
     if (r.legacy) {
       body.append(drow("Old terms — fixed rate", `${fmt(rule.legacyPerDay)} L.L.`, null, true));
@@ -222,25 +219,6 @@
         `${signed(r.fuelRatePerDay - r.roundedPerDay)} L.L.`));
     }
     body.append(drow("Final daily rate", `${fmt(r.fuelRatePerDay)} L.L.`, null, true));
-    if (r.segments && r.segments.length) {
-      used.append(el("h4", { text: "Prices used for the average" }));
-      used.append(el("table", { class: "segments" },
-        el("thead", {}, el("tr", {}, el("th", { text: "Official price table" }), el("th", { class: "num", text: `${rule.fuel} / ${rule.litresPerQuote} L` }))),
-        el("tbody", {}, r.segments.map((s) => el("tr", {},
-          el("td", { text: `In force from ${dayLabel(s.tableDate)}` }),
-          el("td", { class: "num", text: fmt(s.unl95) }))),
-        ),
-        el("tfoot", {}, el("tr", {},
-          el("th", { text: `Average (${fmt(r.sumQuotes)} ÷ ${r.count})` }),
-          el("th", { class: "num", text: fmt(r.avgQuote20L) })))));
-    }
-    if (r.status === "partial") {
-      used.append(el("p", { class: "note", text: "This month isn't over yet: the average uses the price tables published up to today and updates itself whenever IPT publishes a new one." }));
-    } else if (r.status === "future") {
-      used.append(el("p", { class: "note", text: "No prices are published for this month yet. This is an estimate from the latest table and will update automatically." }));
-    }
-
-
     $("rateSub").textContent =
       `Calculated using the average of the official ${rule.fuel} price tables for ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.count} price${r.count === 1 ? "" : "s"}), ` +
       `multiplied by ${rule.litresPerDay} litres per day (price of 1 litre rounded to the nearest 1,000 L.L.) and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
@@ -544,6 +522,10 @@
         el("td", { class: "num " + (diff == null ? "" : diff > 0 ? "up" : diff < 0 ? "down" : ""), text: diff == null ? "—" : diff === 0 ? "0" : (diff > 0 ? "+" : "−") + fmt(Math.abs(diff)) })));
     }
     $("octAvgQuote").textContent = fmt(Math.round(d.avgQuote20L));
+    // October only: the daily transportation allowance for the full month
+    const al = $("octAllowance");
+    al.hidden = d.month !== "2026-10";
+    if (!al.hidden) $("octAllowanceVal").textContent = fmt(d.ratePerDay);
   }
 
   $("octMonth").addEventListener("change", (e) => loadOct(e.target.value));

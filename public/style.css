@@ -500,3 +500,4 @@ body.promo-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .promo, .promo-card { animation: none; } }
 @media print { .promo { display: none !important; } }.oct-avg-top { margin: 0 0 10px; }
 .oct-note { margin: 8px 0 0; }
+.oct-avg[hidden] { display: none; }
