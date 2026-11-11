@@ -214,11 +214,16 @@
           </div>
         </section>
 
-        <!-- October calculator: pick the date the new terms start -->
+        <!-- Monthly calculator (any month from Oct 2026): pick the date the new terms start -->
         <section class="card panel oct" id="octCalc" aria-labelledby="h-oct">
           <div class="panel-head row">
-            <h3 id="h-oct"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"/></svg>October Calculator</h3>
+            <h3 id="h-oct"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M12 14h2M8 17h2"/></svg><span id="octTitle">Monthly Calculator</span></h3>
             <span class="badge blue" id="octBadge">—</span>
+          </div>
+
+          <div class="oct-month">
+            <label for="octMonth">Month</label>
+            <select class="date-input" id="octMonth" aria-label="Calculator month"></select>
           </div>
 
           <div class="oct-pick">

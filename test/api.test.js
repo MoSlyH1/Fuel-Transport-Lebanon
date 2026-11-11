@@ -99,3 +99,11 @@ test("period endpoint: whole month and a chosen start date", async () => {
   assert.deepEqual(b.j.rows.map((r) => r.key), ["old", "new"]);
   assert.equal((await get("/api/period?from=abc")).r.status, 400);
 });
+test("period endpoint: month parameter and month list", async () => {
+  const a = await get("/api/period?month=2026-10");
+  assert.equal(a.r.status, 200);
+  assert.equal(a.j.month, "2026-10");
+  assert.deepEqual(a.j.months.map((m) => m.month), ["2026-10"]); // FUEL_TODAY = 22 Oct
+  assert.equal((await get("/api/period?month=2026-09")).r.status >= 400, true);
+  assert.equal((await get("/api/period?month=bad")).r.status, 400);
+});

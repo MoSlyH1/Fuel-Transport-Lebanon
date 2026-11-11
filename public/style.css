@@ -328,6 +328,9 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .oct .panel-head { margin-bottom: 10px; align-items: center; }
 .oct .panel-head h3 { font-size: 14.5px; }
 .oct .badge { align-self: center; }
+.oct-month { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin-bottom: 10px; }
+.oct-month[hidden] { display: none; }
+.oct-month label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .oct-pick { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px 8px; margin-bottom: 10px; }
 .oct-pick label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .link-btn { all: unset; cursor: pointer; font: 600 12px var(--sans); color: var(--blue); }

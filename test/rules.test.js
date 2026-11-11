@@ -179,3 +179,49 @@ test("October calculator: starting on the 22nd uses the WHOLE-month average", ()
   assert.equal(c.total, 13_620_000);                  // 18 × 450,000 + 8 × 690,000
   assert.equal(c.avgPerDay, 524_000);                 // 523,846 → nearest 1,000                 // total ÷ 26 days
 });
+/* ---- the calculator works for every month, not just October ---- */
+const novTables = [
+  ...tables,
+  { date: "2026-11-03", unl95: 2_500_000 },
+  { date: "2026-11-06", unl95: 2_540_000 },
+  { date: "2026-11-10", unl95: 2_560_000 },
+];
+
+test("monthly calculator: November, whole month = the table in force on 1 Nov + every new table", () => {
+  const c = R.calculatePeriod(undefined, novTables, "2026-11-11");
+  assert.equal(c.month, "2026-11");
+  assert.equal(c.first, "2026-11-01");
+  assert.equal(c.from, "2026-11-01");
+  assert.equal(c.count, 4);                           // 30 Oct carried in + 3, 6, 10 Nov
+  assert.equal(c.avgQuote20L, (2_611_000 + 2_500_000 + 2_540_000 + 2_560_000) / 4);
+  assert.equal(c.rows.length, 1);                     // nothing before the 1st → no previous-rate row
+  assert.equal(c.rows[0].key, "new");
+  assert.equal(c.totalDays, 26);                      // Mon–Sat = 25 in Nov 2026, a pay month is still 26
+  assert.equal(c.total, 26 * c.ratePerDay);
+  // identical to the month table on the page
+  assert.equal(c.ratePerDay, R.calculateMonth("2026-11", novTables, "2026-11-11").ratePerDay);
+});
+
+test("monthly calculator: a later start date keeps the days before it at October's rate", () => {
+  const oct = R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-10" });
+  const c = R.calculatePeriod("2026-11-06", novTables, "2026-11-11");
+  assert.equal(c.count, 2);                           // 6 and 10 Nov
+  assert.equal(c.oldRatePerDay, oct.ratePerDay);      // October's fuel rate, not 450,000
+  assert.deepEqual(c.rows.map((r) => [r.key, r.from, r.to]), [["old", "2026-11-01", "2026-11-05"], ["new", "2026-11-06", "2026-11-30"]]);
+  assert.equal(c.totalDays, 26);
+  assert.deepEqual(c.chips.map((x) => x.date.slice(8)), ["03", "06", "10", "13", "17", "20", "24", "27"]); // Tue + Fri
+  assert.equal(c.chips.find((x) => x.date === "2026-11-13").future, true);
+});
+
+test("monthly calculator: October is untouched, bad months are rejected, and a new month needs no code change", () => {
+  const oct = R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-10" });
+  assert.equal(oct.from, "2026-10-02");
+  assert.equal(oct.ratePerDay, 690_000);
+  assert.equal(oct.totalDays, 26);
+  assert.throws(() => R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-09" }), RangeError);
+  assert.throws(() => R.calculatePeriod(undefined, novTables, "2026-11-11", { month: "2026-12" }), RangeError); // not started
+  // December, once it starts: same maths, previous rate = November's
+  const dec = R.calculatePeriod("2026-12-04", [...novTables, { date: "2026-12-04", unl95: 2_600_000 }], "2026-12-05");
+  assert.equal(dec.month, "2026-12");
+  assert.equal(dec.oldRatePerDay, R.calculateMonth("2026-11", novTables, "2026-12-05").ratePerDay);
+});

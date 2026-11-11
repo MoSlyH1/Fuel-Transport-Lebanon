@@ -9,6 +9,7 @@
   const $ = (id) => document.getElementById(id);
   const nf = new Intl.NumberFormat("en-US");
   const fmt = (n) => nf.format(Math.round(n));
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const signed = (n) => (n < 0 ? "−" : "+") + fmt(Math.abs(n));
   const SVGNS = "http://www.w3.org/2000/svg";
@@ -491,12 +492,12 @@
 
 
   /* =====================================================================
-     October calculator — "the new terms start on <date>"
-       days before the date (from 2 Oct) stay at 450,000
+     Monthly calculator (every month from Oct 2026) — "the new terms start on <date>"
+       days before the date stay at the previous rate (450,000 in Oct 2026, else last month's rate)
        days from the date use the fuel rate, averaged from the date until today
      The server does the maths (/api/period); the days stay editable here.
      ===================================================================== */
-  state.oct = { from: null, mode: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
+  state.oct = { month: null, from: null, mode: null, data: null, days: { old: null, new: null }, daysFor: null, seq: 0 };
 
   const shortRange = (a, b) => {
     const [, m1, d1] = part(a), [, m2, d2] = part(b);
@@ -504,18 +505,19 @@
     return m1 === m2 ? `${d1} – ${d2} ${MON[m1 - 1]}` : `${d1} ${MON[m1 - 1]} – ${d2} ${MON[m2 - 1]}`;
   };
 
-  async function loadOct(from, mode = null) {
+  async function loadOct(from, mode = null, month = state.oct.month) {
     const my = ++state.oct.seq;
     try {
-      const res = await fetch(`/api/period?${new URLSearchParams({ ...(from ? { from } : {}), ...(mode ? { mode } : {}) })}`, { headers: { Accept: "application/json" } });
+      const res = await fetch(`/api/period?${new URLSearchParams({ ...(month ? { month } : {}), ...(from ? { from } : {}), ...(mode ? { mode } : {}) })}`, { headers: { Accept: "application/json" } });
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error((body && body.error) || `Server error (${res.status})`);
       if (my !== state.oct.seq) return;
       const o = state.oct;
       o.data = body;
+      o.month = body.month;
       o.from = body.from;
       o.mode = body.mode === "new" ? "new" : null;
-      const key = `${body.from}|${o.mode}`;
+      const key = `${body.month}|${body.from}|${o.mode}`;
       if (o.daysFor !== key) {                  // a new start date / mode → days go back to the defaults
         o.daysFor = key;
         o.days = { old: null, new: null };
@@ -537,6 +539,16 @@
     const emp = state.employees ?? 1;
 
     // controls
+    $("octTitle").textContent = `${MONTH_NAMES[Number(d.month.slice(5)) - 1]} Calculator`;
+    const sel = $("octMonth");
+    const msig = d.months.map((x) => x.month).join();
+    if (sel.dataset.sig !== msig) {
+      sel.dataset.sig = msig;
+      clear(sel);
+      for (const x of d.months) sel.append(el("option", { value: x.month, text: x.label }));
+    }
+    sel.value = d.month;
+    sel.closest(".oct-month").hidden = d.months.length < 2;
     const inp = $("octFrom");
     inp.min = d.first; inp.max = d.to;
     if (document.activeElement !== inp) inp.value = d.from;
@@ -546,9 +558,9 @@
     const badge = $("octBadge");
     badge.textContent = d.status === "complete" ? "full month" : `to ${shortDay(d.to)}`;
 
-    // one chip per IPT price change in October → start the new average from that table
+    // one chip per IPT price change in the month → start the new average from that table
     const chips = $("octChips");
-    const csig = d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from + "|" + d.mode;
+    const csig = d.month + "|" + d.chips.map((c) => `${c.date}${c.future ? "f" : ""}`).join(",") + "|" + d.from + "|" + d.mode;
     if (chips.dataset.sig !== csig) {
       chips.dataset.sig = csig;
       clear(chips);
@@ -562,7 +574,7 @@
     }
 
     // rows (rebuilt only when the date / prices change, so typing keeps its focus)
-    const sig = `${d.from}|${d.to}|${d.mode}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
+    const sig = `${d.month}|${d.from}|${d.to}|${d.mode}|${d.ratePerDay}|${d.rows.map((r) => r.key).join()}`;
     const tb = $("octBody");
     if (rebuild || tb.dataset.sig !== sig) {
       tb.dataset.sig = sig;
@@ -594,13 +606,14 @@
     if (!em.hidden) em.textContent = `For ${fmt(emp)} employees: ${fmt(total * emp)} L.L.`;
   }
 
+  $("octMonth").addEventListener("change", (e) => loadOct(null, null, e.target.value));
   $("octFrom").addEventListener("change", (e) => {
     const v = e.target.value;
     const d = state.oct.data;
     if (!v || (d && (v < d.first || v > d.to))) { e.target.setAttribute("aria-invalid", "true"); return; }
     loadOct(v);
   });
-  $("octNew").addEventListener("click", () => loadOct(null, "new"));
+  $("octNew").addEventListener("click", () => loadOct(null, "new", state.oct.month));
   $("octChips").addEventListener("click", (e) => {
     const c = e.target.closest(".chip");
     if (c) loadOct(c.dataset.date);
