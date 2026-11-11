@@ -365,6 +365,11 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .oct-grid tbody tr.fuel-row td { background: var(--blue-soft); }
 .oct-grid tbody tr.fuel-row .sub { color: var(--blue); }
 .oct-grid .day-input { width: 48px; padding: 4px 6px; }
+.oct-prices { margin: 12px 0 10px; }
+.oct-prices h4 { margin: 0 0 6px; font-size: 13px; }
+.oct-ptable tfoot th { font-size: 12.5px; }
+.oct-ptable td.up { color: var(--red); }
+.oct-ptable td.down { color: var(--green-ink); }
 .oct-avg {
   display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px;
   background: var(--green-soft); border: 1px solid var(--green-line); border-radius: 10px; padding: 10px 14px;

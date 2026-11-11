@@ -539,7 +539,6 @@
     const emp = state.employees ?? 1;
 
     // controls
-    $("octTitle").textContent = `${MONTH_NAMES[Number(d.month.slice(5)) - 1]} Calculator`;
     const sel = $("octMonth");
     const msig = d.months.map((x) => x.month).join();
     if (sel.dataset.sig !== msig) {
@@ -590,6 +589,24 @@
           el("td", { class: "num", "data-oct-total": r.key })));
       }
     }
+    // every price table of the period (newest first) + the average they give
+    const pb = $("octPrices");
+    clear(pb);
+    const segs = d.segments || [];
+    for (let i = segs.length - 1; i >= 0; i--) {
+      const sg = segs[i], prev = i > 0 ? segs[i - 1] : null;
+      const diff = prev ? sg.unl95 - prev.unl95 : null;
+      pb.append(el("tr", { class: i === segs.length - 1 ? "fuel-row" : "" },
+        el("td", {}, el("span", { class: "per", text: `${shortDay(sg.tableDate)} ${sg.tableDate.slice(0, 4)}` }),
+          sg.tableDate < d.avgFrom ? el("span", { class: "sub", text: "in force at the start" }) : null),
+        el("td", { class: "num", text: fmt(sg.unl95) }),
+        el("td", { class: "num " + (diff == null ? "" : diff > 0 ? "up" : diff < 0 ? "down" : ""), text: diff == null ? "—" : diff === 0 ? "0" : (diff > 0 ? "+" : "−") + fmt(Math.abs(diff)) })));
+    }
+    $("octCount").textContent = `· ${d.count} price${d.count === 1 ? "" : "s"}`;
+    $("octAvgQuote").textContent = `${fmt(Math.round(d.avgQuote20L))} L.L.`;
+    $("octPerLitre").textContent = `${fmt(d.avgPerLitreRounded)} L.L.`;
+    $("octRate").textContent = `${fmt(d.ratePerDay)} L.L.` + (d.clamped === "min" ? " (minimum)" : d.clamped === "max" ? " (maximum)" : "");
+
     let days = 0, total = 0, ok = true;
     for (const r of d.rows) {
       const n = o.days[r.key];
@@ -812,7 +829,7 @@
       msg = body.status === "updated" ? "New prices recorded"
         : body.status === "failed" ? "IPT unreachable"
         : "Already up to date";
-      await Promise.all([load({ fresh: true }), loadOct(state.oct.from)]);
+      await Promise.all([load({ fresh: true }), reloadOct()]);
     } catch { msg = "Couldn't update"; }
     btn.disabled = false; btn.classList.remove("spin"); text.textContent = msg;
     clearTimeout(resetTimer);
@@ -831,8 +848,18 @@
   let rz = null;
   window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.data && renderChart(), 120); });
 
+  // reload the calculator keeping the chosen month / start date / mode
+  function reloadOct() { const o = state.oct; return o.mode ? loadOct(null, o.mode) : loadOct(o.from); }
+
+  // New prices show up by themselves: the server re-reads the source at most every 10 minutes,
+  // and an open page asks again every 5 minutes (and when you come back to the tab).
+  function autoRefresh() {
+    if (document.visibilityState !== "visible") return;
+    load(); reloadOct();
+  }
+  setInterval(autoRefresh, 5 * 60 * 1000);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && state.data && Date.now() - state.loadedAt > 10 * 60 * 1000) { load(); loadOct(state.oct.from); }
+    if (document.visibilityState === "visible" && state.data && Date.now() - state.loadedAt > 5 * 60 * 1000) autoRefresh();
   });
 
   load();
