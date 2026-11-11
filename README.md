@@ -13,8 +13,8 @@ Vanilla JS front end · Node.js back end · PostgreSQL · Docker · Vercel-ready
 
 ```
 average price / 20 L = (sum of the price tables) ÷ (number of tables)   — each table counts once
-price of 1 litre     = average ÷ 20, rounded to the nearest 1,000   (137,925 → 138,000)
-daily rate           = 5 × the rounded litre price (5 × 138,000 = 690,000) → kept within 500,000–800,000
+price of 1 litre     = average ÷ 20                                 (e.g. 137,328)
+daily rate           = 5 × the litre price, rounded to the nearest 1,000 AFTER × 5 (686,640 → 687,000) → kept within 500,000–800,000
 transportation       = days worked × daily rate  (× employees)
 ```
 
@@ -26,7 +26,7 @@ October 2026 has split: days before 22 Oct at **450,000** + days from 22 Oct at 
 
 Check (full October, 2 → 30 Oct, 8 tables): 22,068,000 ÷ 8 = 2,758,500 → 137,925 per litre → **138,000** → × 5 = **690,000 / day**.
 
-## October calculator (side card)
+## monthly calculator (side card)
 
 Pick the date the new terms start (chips = every October price change; default = whole month, first table **2 Oct**).
 Days before it, from **1 Oct**, stay at **450,000**; days from it use the fuel rate, averaged from that date until today
