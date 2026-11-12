@@ -214,7 +214,7 @@
         `${fmt(r.avgQuote20L)} per ${rule.litresPerQuote} L ÷ ${rule.litresPerQuote}`),
       drow("Daily consumption", `${rule.litresPerDay} litres`),
       drow("Daily amount", `${fmt(r.rawPerDay)} L.L.`, `${rule.litresPerDay} × ${fmt(r.avgPerLitre)}`),
-      drow(`Rounded to the nearest thousand L.L.`, "after multiplying by 5"));
+      drow(`Rounded to the nearest thousand`, `${fmt(r.roundedPerDay)} L.L.`, "after multiplying by 5"));
     if (r.clamped) {
       body.append(drow(r.clamped === "min" ? "Raised to the minimum" : "Capped at the maximum",
         `${signed(r.fuelRatePerDay - r.roundedPerDay)} L.L.`));
@@ -222,7 +222,7 @@
     body.append(drow("Final daily rate", `${fmt(r.fuelRatePerDay)} L.L.`, null, true));
     $("rateSub").textContent =
       `Calculated using the average of the official ${rule.fuel} price tables for ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.count} price${r.count === 1 ? "" : "s"}), ` +
-      `multiplied by ${rule.litresPerDay} litres per day (rounded to the nearest ${fmt(roundTo)} L.L.) and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
+      `multiplied by ${rule.litresPerDay} litres per day (rounded to the nearest thousand L.L.) and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
   }
 
   /* breakdown rows are rebuilt only when the month changes, so typing keeps focus */
