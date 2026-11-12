@@ -214,7 +214,7 @@
         `${fmt(r.avgQuote20L)} per ${rule.litresPerQuote} L ÷ ${rule.litresPerQuote}`),
       drow("Daily consumption", `${rule.litresPerDay} litres`),
       drow("Daily amount", `${fmt(r.rawPerDay)} L.L.`, `${rule.litresPerDay} × ${fmt(r.avgPerLitre)}`),
-      drow(`Rounded to the nearest ${fmt(roundTo)}`, `${fmt(r.roundedPerDay)} L.L.`, "after multiplying by 5"));
+      drow(`Rounded to the nearest thousand L.L.`, "after multiplying by 5"));
     if (r.clamped) {
       body.append(drow(r.clamped === "min" ? "Raised to the minimum" : "Capped at the maximum",
         `${signed(r.fuelRatePerDay - r.roundedPerDay)} L.L.`));
