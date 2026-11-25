@@ -210,8 +210,10 @@
       return;
     }
     body.append(
-      drow(`Average price per litre (${rule.fuel})`, `${fmt(r.avgPerLitre)} L.L.`,
-        `${fmt(r.avgQuote20L)} per ${rule.litresPerQuote} L ÷ ${rule.litresPerQuote}`),
+      drow(`Average price per ${rule.litresPerQuote} L (${rule.fuel})`, `${fmt(r.avgQuote20L)} L.L.`,
+        `${fmt(r.sumQuotes)} ÷ ${r.avgDays} day${r.avgDays === 1 ? "" : "s"} (Sat & Sun included)`),
+      drow(`Average price per litre`, `${fmt(r.avgPerLitre)} L.L.`,
+        `${fmt(r.avgQuote20L)} ÷ ${rule.litresPerQuote}`),
       drow("Daily consumption", `${rule.litresPerDay} litres`),
       drow("Daily amount", `${fmt(r.rawPerDay)} L.L.`, `${rule.litresPerDay} × ${fmt(r.avgPerLitre)}`),
       drow(`Rounded to the nearest thousand`, `${fmt(r.roundedPerDay)} L.L.`, "after multiplying by 5"));
@@ -221,8 +223,9 @@
     }
     body.append(drow("Final daily rate", `${fmt(r.fuelRatePerDay)} L.L.`, null, true));
     $("rateSub").textContent =
-      `Calculated using the average of the official ${rule.fuel} price tables for ${rangeLabel(r.averagedFrom, r.averagedTo)} (${r.count} price${r.count === 1 ? "" : "s"}), ` +
-      `multiplied by ${rule.litresPerDay} litres per day (rounded to the nearest thousand L.L.) and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
+      `Day-by-day average of the official ${rule.fuel} price for ${rangeLabel(r.averagedFrom, r.averagedTo)} ` +
+      `(${r.avgDays} day${r.avgDays === 1 ? "" : "s"}, weekends included, ${r.count} price table${r.count === 1 ? "" : "s"} — each price counts for every day it stayed in force), ` +
+      `multiplied by ${rule.litresPerDay} litres per day, rounded to the nearest 1,000 L.L. and kept between ${fmt(rule.minPerDay)} and ${fmt(rule.maxPerDay)} L.L.`;
   }
 
   /* breakdown rows are rebuilt only when the month changes, so typing keeps focus */
@@ -520,10 +523,13 @@
       pb.append(el("tr", { class: i === segs.length - 1 ? "fuel-row" : "" },
         el("td", {}, el("span", { class: "per", text: `${shortDay(sg.tableDate)} ${sg.tableDate.slice(0, 4)}` })),
         el("td", { class: "num", text: fmt(sg.unl95) }),
+        el("td", { class: "num", text: String(sg.days ?? "—") }),
         el("td", { class: "num " + (diff == null ? "" : diff > 0 ? "up" : diff < 0 ? "down" : ""), text: diff == null ? "—" : diff === 0 ? "0" : (diff > 0 ? "+" : "−") + fmt(Math.abs(diff)) })));
     }
     $("octAvgQuote").textContent = fmt(Math.round(d.avgQuote20L));
-    // October only: the daily transportation allowance for the full month
+    $("octNote").textContent = `${fmt(d.sumQuotes)} ÷ ${d.avgDays} days = ${fmt(Math.round(d.avgQuote20L))} per 20 L. ` +
+      "Each price counts for every day it stayed in force, Saturdays and Sundays included. New prices appear here as soon as they come out.";
+    // the daily transportation allowance (October only)
     const al = $("octAllowance");
     al.hidden = d.month !== "2026-10";
     if (!al.hidden) $("octAllowanceVal").textContent = fmt(d.ratePerDay);

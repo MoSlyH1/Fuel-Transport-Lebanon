@@ -1,112 +1,109 @@
-/* =====================================================================
-   server.js — the Docker / local server.
-   Serves public/ and runs the very same api/*.js handlers Vercel uses.
-   Also re-reads IPT every 30 minutes so prices are recorded even when
-   nobody has the page open.
-   ===================================================================== */
 "use strict";
+// Starts the real server (the same one Docker runs) and calls it over HTTP.
+process.env.FUEL_TODAY = "2026-10-22";
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { spawn } = require("node:child_process");
+const path = require("node:path");
 
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
+let child, base;
 
-const service = require("./lib/service");
-const db = require("./lib/db");
-
-const PORT = Number(process.env.PORT || 3000);
-const PUBLIC = path.join(__dirname, "public");
-
-// Full-access (no-ad) links: read from vercel.json "rewrites" so the local /
-// Docker server and Vercel always use the same links. Change them there only.
-const FULL_ACCESS = new Set();
-try {
-  const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, "vercel.json"), "utf8"));
-  for (const r of cfg.rewrites || []) {
-    if (r.destination === "/index.html") FULL_ACCESS.add(r.source.replace(/\/+$/, ""));
-  }
-} catch { /* no vercel.json — main link only */ }
-
-const routes = {
-  "/api/summary": require("./api/summary"),
-  "/api/prices": require("./api/prices"),
-  "/api/rate": require("./api/rate"),
-  "/api/period": require("./api/period"),
-  "/api/refresh": require("./api/refresh"),
-  "/api/health": require("./api/health"),
-};
-
-const TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-  ".json": "application/json; charset=utf-8",
-  ".txt": "text/plain; charset=utf-8",
-};
-
-const SECURITY_HEADERS = {
-  "X-Content-Type-Options": "nosniff",
-  "Referrer-Policy": "no-referrer",
-  "X-Frame-Options": "DENY",
-  "Content-Security-Policy":
-    "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
-};
-
-function serveStatic(req, res, pathname) {
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    res.writeHead(405, { Allow: "GET, HEAD" });
-    return res.end();
-  }
-  let rel;
-  try { rel = decodeURIComponent(pathname); } catch { res.writeHead(400); return res.end(); }
-  if (rel.includes("\0")) { res.writeHead(400); return res.end(); }
-  if (rel === "/" || FULL_ACCESS.has(rel.replace(/\/+$/, ""))) rel = "/index.html";
-
-  const file = path.normalize(path.join(PUBLIC, rel));
-  if (!file.startsWith(PUBLIC + path.sep)) { res.writeHead(403); return res.end(); }
-
-  fs.stat(file, (err, st) => {
-    if (err || !st.isFile()) {
-      res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8", ...SECURITY_HEADERS });
-      return res.end("Not found");
-    }
-    const ext = path.extname(file).toLowerCase();
-    res.writeHead(200, {
-      "Content-Type": TYPES[ext] || "application/octet-stream",
-      "Content-Length": st.size,
-      "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=300",
-      ...SECURITY_HEADERS,
-    });
-    if (req.method === "HEAD") return res.end();
-    fs.createReadStream(file).pipe(res);
+test.before(async () => {
+  const port = 3200 + Math.floor(Math.random() * 500);
+  base = `http://127.0.0.1:${port}`;
+  child = spawn(process.execPath, [path.join(__dirname, "..", "server.js")], {
+    env: { ...process.env, PORT: String(port), DATABASE_URL: "", HTTPS_PROXY: "", https_proxy: "" },
+    stdio: "ignore",
   });
-}
-
-const server = http.createServer((req, res) => {
-  let pathname;
-  try { pathname = new URL(req.url, "http://localhost").pathname; } catch { res.writeHead(400); return res.end(); }
-  const api = routes[pathname];
-  if (api) return api(req, res);
-  if (pathname.startsWith("/api/")) {
-    res.writeHead(404, { "Content-Type": "application/json" });
-    return res.end(JSON.stringify({ error: "Unknown endpoint" }));
+  for (let i = 0; i < 50; i++) {
+    try { if ((await fetch(`${base}/api/health`)).ok) return; } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 100));
   }
-  serveStatic(req, res, pathname);
+  throw new Error("server did not start");
+});
+test.after(() => child && child.kill());
+
+const get = async (p, init) => { const r = await fetch(base + p, init); return { r, j: await r.json().catch(() => null) }; };
+
+test("summary: prices, rate, payslip and months", async () => {
+  const { r, j } = await get("/api/summary?month=2026-10&days=26");
+  assert.equal(r.status, 200);
+  assert.equal(j.rate.fuelRatePerDay, 700_000);
+  assert.equal(j.rate.ratePerDay, 700_000); // "500K–800K" button: 1–22 Oct day by day (22 days) → 699,648 → nearest 1,000
+  assert.equal(j.rate.oldRatePerDay, 450_000); // "450K" button
+  assert.equal(j.payslip.total, 26 * 700_000);
+  const f = Object.fromEntries(j.prices.fuels.map((x) => [x.key, x]));
+  assert.equal(f.unl95.price, 2_739_000);
+  assert.equal(f.unl98.price, 2_757_000);
+  assert.equal(f.diesel.price, 2_563_000);
+  assert.equal(f.lpg.price, 1_494_000);
+  assert.equal(f.unl95.change, -34_000);
+  assert.equal(j.months[0].month, "2026-10");
+  assert.equal(j.months.length, 1); // no future months (no predictions)
+  assert.equal(j.prices.tableDate, "2026-10-20");
 });
 
-server.listen(PORT, () => {
-  console.log(`Fuel & Transport running on http://localhost:${PORT}`);
-  console.log(db.enabled() ? "[db] DATABASE_URL set — prices will be saved" : "[db] no DATABASE_URL — running from the built-in price history");
-  // keep the history growing even with no visitors
-  setTimeout(() => service.refresh().catch(() => {}), 2000).unref();
-  setInterval(() => service.refresh().catch(() => {}), 30 * 60 * 1000).unref();
+test("default month is the current month", async () => {
+  const { j } = await get("/api/summary");
+  assert.equal(j.rate.month, "2026-10");
 });
 
-function shutdown() {
-  server.close(() => db.close().finally(() => process.exit(0)));
-  setTimeout(() => process.exit(0), 5000).unref();
-}
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+test("rate endpoint accepts employees", async () => {
+  const { j } = await get("/api/rate?month=2026-10&days=20&employees=3");
+  assert.equal(j.payslip.total, 20 * 700_000 * 3);
+});
+
+test("bad input is rejected with 400", async () => {
+  for (const q of ["month=2026-13", "month=abc", "days=40", "days=-1", "days=1.5", "employees=0"]) {
+    const { r, j } = await get(`/api/summary?${q}`);
+    assert.equal(r.status, 400, q);
+    assert.ok(j.error);
+  }
+});
+
+test("refresh never crashes when IPT is unreachable", async () => {
+  const { r, j } = await get("/api/refresh", { method: "POST" });
+  assert.equal(r.status, 200);
+  assert.ok(["failed", "updated", "unchanged", "throttled"].includes(j.status));
+  assert.equal(j.tableDate, "2026-10-20");
+});
+
+test("wrong method and unknown paths", async () => {
+  assert.equal((await get("/api/summary", { method: "POST" })).r.status, 405);
+  assert.equal((await get("/api/nope")).r.status, 404);
+});
+
+test("static files are served and path traversal is blocked", async () => {
+  const html = await fetch(base + "/");
+  assert.equal(html.status, 200);
+  assert.match(await html.text(), /Transport Lebanon/);
+  assert.equal((await fetch(base + "/app.js")).status, 200);
+  assert.equal((await fetch(base + "/style.css")).status, 200);
+  // raw paths (fetch would tidy them up before sending)
+  const raw = (p) => new Promise((resolve, reject) => {
+    const u = new URL(base);
+    require("node:http").get({ host: u.hostname, port: u.port, path: p }, (res) => { res.resume(); resolve(res.statusCode); }).on("error", reject);
+  });
+  assert.equal(await raw("/..%2fpackage.json"), 403);
+  for (const p of ["/%2e%2e/server.js", "/../server.js", "/..%5cserver.js"]) {
+    assert.ok([403, 404].includes(await raw(p)), p); // never served
+  }
+  assert.equal(await raw("/a%00b"), 400);
+  assert.equal((await fetch(base + "/missing.txt")).status, 404);
+});
+test("period endpoint: whole month and a chosen start date", async () => {
+  const a = await get("/api/period");
+  assert.equal(a.r.status, 200);
+  assert.equal(a.j.from, "2026-10-01");
+  const b = await get("/api/period?from=2026-10-09");
+  assert.deepEqual(b.j.rows.map((r) => r.key), ["old", "new"]);
+  assert.equal((await get("/api/period?from=abc")).r.status, 400);
+});
+test("period endpoint: month parameter and month list", async () => {
+  const a = await get("/api/period?month=2026-10");
+  assert.equal(a.r.status, 200);
+  assert.equal(a.j.month, "2026-10");
+  assert.deepEqual(a.j.months.map((m) => m.month), ["2026-10"]); // FUEL_TODAY = 22 Oct
+  assert.equal((await get("/api/period?month=2026-09")).r.status >= 400, true);
+  assert.equal((await get("/api/period?month=bad")).r.status, 400);
+});

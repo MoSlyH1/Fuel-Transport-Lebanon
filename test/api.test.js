@@ -29,7 +29,7 @@ test("summary: prices, rate, payslip and months", async () => {
   const { r, j } = await get("/api/summary?month=2026-10&days=26");
   assert.equal(r.status, 200);
   assert.equal(j.rate.fuelRatePerDay, 700_000);
-  assert.equal(j.rate.ratePerDay, 700_000); // "500K–800K" button: whole-month average, October rounded to 10,000
+  assert.equal(j.rate.ratePerDay, 700_000); // "500K–800K" button: 1–22 Oct day by day (22 days) → 699,648 → nearest 1,000
   assert.equal(j.rate.oldRatePerDay, 450_000); // "450K" button
   assert.equal(j.payslip.total, 26 * 700_000);
   const f = Object.fromEntries(j.prices.fuels.map((x) => [x.key, x]));
@@ -94,7 +94,7 @@ test("static files are served and path traversal is blocked", async () => {
 test("period endpoint: whole month and a chosen start date", async () => {
   const a = await get("/api/period");
   assert.equal(a.r.status, 200);
-  assert.equal(a.j.from, "2026-10-02");
+  assert.equal(a.j.from, "2026-10-01");
   const b = await get("/api/period?from=2026-10-09");
   assert.deepEqual(b.j.rows.map((r) => r.key), ["old", "new"]);
   assert.equal((await get("/api/period?from=abc")).r.status, 400);
