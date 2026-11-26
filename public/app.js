@@ -589,9 +589,19 @@
     dayIn.max = String(d.daysInMonth);
     dayIn.removeAttribute("aria-invalid");
     if (document.activeElement !== dayIn) dayIn.value = String(d.closingDay);
-    for (const c of document.querySelectorAll(".close-chips .chip")) {
-      const v = Math.min(Number(c.dataset.day), d.daysInMonth);
-      c.setAttribute("aria-pressed", String(v === d.closingDay));
+    $("closeDayMax").textContent = `(1–${d.daysInMonth})`;
+    const grid = $("closeDayGrid");
+    if (grid.dataset.n !== String(d.daysInMonth)) {            // build the 1…N buttons once per month length
+      grid.dataset.n = String(d.daysInMonth);
+      clear(grid);
+      for (let n = 1; n <= d.daysInMonth; n++) grid.append(el("button", { type: "button", class: "day", "data-day": String(n), text: String(n) }));
+    }
+    const todayDay = d.today.slice(0, 7) === d.month ? Number(d.today.slice(8)) : d.today > d.end ? 99 : 0;
+    for (const b of grid.children) {
+      const n = Number(b.dataset.day);
+      b.setAttribute("aria-pressed", String(n === d.closingDay));
+      b.classList.toggle("future", n > todayDay);                 // not reached yet → provisional
+      b.title = n > todayDay ? `${n} ${MON[Number(d.month.slice(5)) - 1]} — not reached yet (provisional)` : `${n} ${MON[Number(d.month.slice(5)) - 1]}`;
     }
     $("closeBadge").textContent = d.provisional ? "provisional" : `closes ${shortDay(d.closing)}`;
     $("closeRate").textContent = fmt(d.ratePerDay);
@@ -641,12 +651,12 @@
     closeT = setTimeout(() => loadClose(), 250);
   });
   $("closeDay").addEventListener("blur", () => renderClose());
-  document.querySelector(".close-chips").addEventListener("click", (e) => {
-    const c = e.target.closest(".chip");
-    if (!c) return;
-    state.close.day = Number(c.dataset.day);
-    $("closeDay").value = c.dataset.day;
-    try { localStorage.setItem("closingDay", c.dataset.day); } catch { /* storage off */ }
+  $("closeDayGrid").addEventListener("click", (e) => {
+    const b = e.target.closest(".day");
+    if (!b) return;
+    state.close.day = Number(b.dataset.day);
+    $("closeDay").value = b.dataset.day;
+    try { localStorage.setItem("closingDay", b.dataset.day); } catch { /* storage off */ }
     loadClose();
   });
 
@@ -692,10 +702,10 @@
 
     const X = (v) => String(v).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]));
     const col = (i) => String.fromCharCode(65 + i); // A..I is all we need
-    const HEAD = 1, DATE = 2, PRICE = 3, CHANGE = 4; // style ids in styles.xml below
+    const HEAD = 1, DATE = 2, PRICE = 3, CHANGE = 4, DEC3 = 5, BOLD = 6; // style ids in styles.xml below
 
     /** headers: string[]; rows: Array<Array<{t:"s"|"n"|"d", v}|null>>; widths: number[] */
-    function sheet(name, headers, rows, widths) {
+    function sheet(name, headers, rows, widths, opts = {}) {
       const cell = (c, r, x, style) => {
         const ref = `${col(c)}${r}`;
         if (x == null) return "";
@@ -703,24 +713,26 @@
         return `<c r="${ref}" s="${style}"><v>${x.v}</v></c>`;
       };
       const head = `<row r="1" ht="32" customHeight="1">${headers.map((h, i) => cell(i, 1, { t: "s", v: h }, HEAD)).join("")}</row>`;
-      const body = rows.map((row, ri) => `<row r="${ri + 2}">${row.map((x, ci) => cell(ci, ri + 2, x, x && x.t === "d" ? DATE : ci % 2 === 1 ? PRICE : CHANGE)).join("")}</row>`).join("");
+      const body = rows.map((row, ri) => `<row r="${ri + 2}">${row.map((x, ci) => cell(ci, ri + 2, x, x && x.t === "d" ? DATE : x && x.style != null ? x.style : opts.styles ? opts.styles[ci] : ci % 2 === 1 ? PRICE : CHANGE)).join("")}</row>`).join("");
       const last = `${col(headers.length - 1)}${rows.length + 1}`;
       const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
         `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0" showGridLines="1"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>` +
         `<sheetFormatPr defaultRowHeight="18"/><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join("")}</cols>` +
-        `<sheetData>${head}${body}</sheetData>${rows.length ? `<autoFilter ref="A1:${last}"/>` : ""}</worksheet>`;
+        `<sheetData>${head}${body}</sheetData>${rows.length && opts.filter !== false ? `<autoFilter ref="A1:${last}"/>` : ""}</worksheet>`;
       const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>` +
         `<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">` +
-        `<numFmts count="2"><numFmt numFmtId="164" formatCode="d mmm yyyy"/><numFmt numFmtId="165" formatCode="[Red]+#,##0;[Color10]-#,##0;&quot;&quot;"/></numFmts>` +
-        `<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>` +
+        `<numFmts count="3"><numFmt numFmtId="166" formatCode="#,##0.000"/><numFmt numFmtId="164" formatCode="d mmm yyyy"/><numFmt numFmtId="165" formatCode="[Red]+#,##0;[Color10]-#,##0;&quot;&quot;"/></numFmts>` +
+        `<fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>` +
         `<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F2A4D"/><bgColor indexed="64"/></patternFill></fill></fills>` +
         `<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>` +
         `<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>` +
-        `<cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
+        `<cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>` +
         `<xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>` +
         `<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment horizontal="left"/></xf>` +
         `<xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>` +
-        `<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>` +
+        `<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>` +
+        `<xf numFmtId="166" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>` +
+        `<xf numFmtId="3" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>` +
         `<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
       return zip([
         { name: "[Content_Types].xml", text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
@@ -731,7 +743,7 @@
         { name: "xl/worksheets/sheet1.xml", text: sheetXml },
       ]);
     }
-    return { sheet };
+    return { sheet, STYLE: { PRICE, DEC3, BOLD } };
   })();
 
   const FUEL_COLS = [["unl95", "UNL 95 (per 20 L)", "UNL 95 change"], ["unl98", "UNL 98 (per 20 L)", "UNL 98 change"],
@@ -800,6 +812,33 @@
     $("xlFrom").dataset.touched = c.dataset.range === "all" ? "" : "1";
     $("xlTo").dataset.followLatest = "1";
     updateExportInfo();
+  });
+
+  $("closeXl").addEventListener("click", () => {
+    const d = state.close.data;
+    if (!d) return;
+    const { PRICE, DEC3, BOLD } = xlsx.STYLE;
+    const S = (v, style) => ({ t: "s", v, style: style ?? PRICE });
+    const N = (v, style) => ({ t: "n", v, style: style ?? PRICE });
+    const rows = d.segments.map((sg) => [
+      { t: "d", v: excelDate(sg.from) }, { t: "d", v: excelDate(sg.to) },
+      S(sg.carried ? "Closing-day price carried" : `Price of ${dayLabel(sg.tableDate)}`),
+      N(sg.unl95), N(sg.days), N(sg.unl95 * sg.days)]);
+    rows.push([S("Total", BOLD), null, null, null, N(d.avgDays, BOLD), N(d.sumQuotes, BOLD)]);
+    rows.push([], [S(`Closing day: ${dayLabel(d.closing)}${d.provisional ? " (provisional — not reached yet)" : ""}`)],
+      [S("Average price / 20 L (total ÷ days)", BOLD), null, null, null, null, N(d.avgQuote20L, DEC3)],
+      [S("Price per litre (÷ 20)"), null, null, null, null, N(d.avgPerLitre, DEC3)],
+      [S(`× ${d.rule.litresPerDay} litres per day`), null, null, null, null, N(d.rawPerDay, DEC3)],
+      [S(`Rounded to the nearest ${fmt(d.roundTo)}`), null, null, null, null, N(d.roundedPerDay)],
+      [S("Daily transportation allowance (L.L.)", BOLD), null, null, null, null, N(d.ratePerDay, BOLD)]);
+    for (const t of d.ignored) rows.push([S(`Not counted — published ${dayLabel(t.date)} (after the closing day)`), null, null, null, null, N(t.unl95)]);
+    const blob = xlsx.sheet(`Closing ${d.closing}`,
+      ["From", "To", "Price used", "UNL 95 (per 20 L)", "Days", "Price × days"], rows, [14, 14, 34, 18, 9, 18],
+      { styles: [PRICE, PRICE, PRICE, PRICE, PRICE, PRICE], filter: false });
+    const url = URL.createObjectURL(blob);
+    const a = el("a", { href: url, download: `closing-day_${d.closing}.xlsx` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
 
   $("xlBtn").addEventListener("click", () => {
