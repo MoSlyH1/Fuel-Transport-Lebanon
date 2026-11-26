@@ -7,7 +7,7 @@
   <meta name="description" content="Official IPT fuel prices in Lebanon and the fuel-indexed transportation allowance, month by month.">
   <meta name="theme-color" content="#0f2a4d">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=4">
+  <link rel="stylesheet" href="/style.css?v=5">
 </head>
 <body>
   <!-- ================= header ================= -->
@@ -172,6 +172,49 @@
             </div>
             <p class="compare muted small" id="oldLine"></p>
 
+            <!-- closing-day calculator (fills the space under the breakdown) -->
+            <div class="close-calc" id="closeCalc" aria-labelledby="h-close">
+              <div class="close-head">
+                <h4 id="h-close"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M14 14.5l1.8 1.8 3-3.3"/></svg>Closing Day Calculator</h4>
+                <span class="badge blue" id="closeBadge">—</span>
+              </div>
+              <p class="muted small close-intro">For companies that close payroll before the end of the month: the price in force on the closing day is used for every day after it, even if a new price comes out later.</p>
+
+              <div class="close-controls">
+                <label>Month
+                  <select class="date-input" id="closeMonth" aria-label="Month"></select></label>
+                <label>Closing day
+                  <input class="date-input" id="closeDay" type="number" inputmode="numeric" min="1" max="31" step="1" value="24" aria-label="Closing day of the month"></label>
+              </div>
+              <div class="close-chips" role="group" aria-label="Common closing days">
+                <button type="button" class="chip" data-day="20">20th</button>
+                <button type="button" class="chip" data-day="24">24th</button>
+                <button type="button" class="chip" data-day="25">25th</button>
+                <button type="button" class="chip" data-day="31">Month end</button>
+              </div>
+              <p class="oct-err small" id="closeErr" hidden></p>
+
+              <div class="close-result" aria-live="polite">
+                <div>
+                  <span class="small">Daily transportation allowance</span>
+                  <b><span id="closeRate">—</span> <small>L.L.</small></b>
+                </div>
+                <div class="close-avg">
+                  <span class="small">Month's average · UNL 95 / 20 L</span>
+                  <b><span id="closeAvg">—</span> <small>L.L.</small></b>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table class="grid oct-grid close-grid">
+                  <thead><tr><th>Period</th><th class="num">UNL 95</th><th class="num">Days</th></tr></thead>
+                  <tbody id="closeBody"></tbody>
+                  <tfoot><tr><th>Total</th><th class="num" id="closeSum">—</th><th class="num" id="closeDays">—</th></tr></tfoot>
+                </table>
+              </div>
+              <p class="muted small close-note" id="closeNote"></p>
+            </div>
+
           </section>
         </div>
       </div>
@@ -335,7 +378,7 @@
   </div>
 
   <noscript><p class="wrap">This page needs JavaScript to calculate.</p></noscript>
-  <script src="/app.js?v=6" defer></script>
+  <script src="/app.js?v=7" defer></script>
   <script src="/promo.js?v=4" defer></script>
 </body>
 </html>

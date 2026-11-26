@@ -137,3 +137,27 @@ test("monthly calculator: later month, previous rate = last month's fuel rate", 
   assert.throws(() => R.calculatePeriod(undefined, tables, "2026-11-11", { month: "2026-09" }), RangeError);
   assert.throws(() => R.calculatePeriod(undefined, tables, "2026-11-11", { month: "2026-12" }), RangeError);
 });
+test("closing day: the closing-day price is carried to the end of the month", () => {
+  const { calculateClosing } = require("../lib/rules");
+  const T = [
+    { date: "2026-10-30", unl95: 2_611_000 }, { date: "2026-11-03", unl95: 2_569_000 },
+    { date: "2026-11-06", unl95: 2_492_000 }, { date: "2026-11-10", unl95: 2_445_000 },
+    { date: "2026-11-13", unl95: 2_391_000 }, { date: "2026-11-17", unl95: 2_343_000 },
+    { date: "2026-11-20", unl95: 2_291_000 }, { date: "2026-11-24", unl95: 2_242_000 },
+    { date: "2026-11-27", unl95: 2_100_000 },
+  ];
+  const c = calculateClosing("2026-11", 24, T, "2026-11-30");
+  assert.equal(c.sumQuotes, 71_683_000);           // 2,242,000 × 7 days (24 → 30), the 27 Nov table ignored
+  assert.equal(c.avgDays, 30);
+  assert.equal(c.ratePerDay, 597_000);             // 2,389,433.333 ÷ 20 × 5 = 597,358 → 597,000
+  assert.deepEqual(c.ignored.map((t) => t.date), ["2026-11-27"]);
+  const last = c.segments[c.segments.length - 1];
+  assert.equal(last.carried, true); assert.equal(last.unl95, 2_242_000); assert.equal(last.days, 6);
+  // closing on the 23rd → 20 Nov price held from the 24th
+  const d = calculateClosing("2026-11", 23, T, "2026-11-30");
+  assert.equal(d.lockedPrice, 2_291_000);
+  // closing day still ahead → provisional
+  assert.equal(calculateClosing("2026-11", 29, T, "2026-11-26").provisional, true);
+  // 31 in a 30-day month → the last day
+  assert.equal(calculateClosing("2026-11", 31, T, "2026-11-30").closingDay, 30);
+});

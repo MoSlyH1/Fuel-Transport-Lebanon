@@ -543,6 +543,114 @@
   $("octMonth").addEventListener("change", (e) => loadOct(e.target.value));
 
   /* =====================================================================
+     Closing-day calculator
+       1st → closing day : the price in force each day
+       after it          : the closing-day price, carried to the month's end
+                           (tables published after the closing day don't count)
+     The server does the maths (/api/closing); nothing is calculated here.
+     ===================================================================== */
+  state.close = { month: null, day: 24, data: null, seq: 0 };
+  try { const d = Number(localStorage.getItem("closingDay")); if (d >= 1 && d <= 31) state.close.day = d; } catch { /* storage off */ }
+  $("closeDay").value = String(state.close.day);
+
+  async function loadClose(month = state.close.month, day = state.close.day) {
+    const my = ++state.close.seq;
+    try {
+      const q = new URLSearchParams({ ...(month ? { month } : {}), day: String(day) });
+      const res = await fetch(`/api/closing?${q}`, { headers: { Accept: "application/json" } });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error((body && body.error) || `Server error (${res.status})`);
+      if (my !== state.close.seq) return;
+      state.close.data = body;
+      state.close.month = body.month;
+      $("closeErr").hidden = true;
+      renderClose();
+    } catch (e) {
+      if (my !== state.close.seq) return;
+      $("closeErr").hidden = false;
+      $("closeErr").textContent = e && e.message && !/failed to fetch|networkerror|load failed/i.test(e.message)
+        ? e.message : "Couldn't reach the server. Check your connection and try again.";
+    }
+  }
+  const reloadClose = () => loadClose();
+
+  function renderClose() {
+    const d = state.close.data;
+    if (!d) return;
+    const sel = $("closeMonth");
+    const msig = d.months.map((x) => x.month).join();
+    if (sel.dataset.sig !== msig) {
+      sel.dataset.sig = msig;
+      clear(sel);
+      for (const x of d.months) sel.append(el("option", { value: x.month, text: x.label }));
+    }
+    sel.value = d.month;
+    const dayIn = $("closeDay");
+    dayIn.max = String(d.daysInMonth);
+    dayIn.removeAttribute("aria-invalid");
+    if (document.activeElement !== dayIn) dayIn.value = String(d.closingDay);
+    for (const c of document.querySelectorAll(".close-chips .chip")) {
+      const v = Math.min(Number(c.dataset.day), d.daysInMonth);
+      c.setAttribute("aria-pressed", String(v === d.closingDay));
+    }
+    $("closeBadge").textContent = d.provisional ? "provisional" : `closes ${shortDay(d.closing)}`;
+    $("closeRate").textContent = fmt(d.ratePerDay);
+    $("closeAvg").textContent = fmtX(d.avgQuote20L);
+
+    const tb = $("closeBody");
+    clear(tb);
+    for (const sg of d.segments) {
+      const when = sg.from === sg.to ? shortDay(sg.from) : `${shortDay(sg.from)} → ${shortDay(sg.to)}`;
+      const sub = sg.carried
+        ? (d.provisional ? `today's price (${shortDay(sg.tableDate)}) held` : `closing-day price held`)
+        : `price of ${shortDay(sg.tableDate)}`;
+      tb.append(el("tr", { class: sg.carried ? "locked" : "" },
+        el("td", {}, el("span", { class: "per", text: when }), el("div", { class: "sub muted small", text: sub })),
+        el("td", { class: "num", text: fmt(sg.unl95) }),
+        el("td", { class: "num", text: String(sg.days) })));
+    }
+    $("closeSum").textContent = fmt(d.sumQuotes);
+    $("closeDays").textContent = String(d.avgDays);
+
+    const note = $("closeNote");
+    clear(note);
+    note.append(`${fmt(d.sumQuotes)} ÷ ${d.avgDays} days = ${fmtX(d.avgQuote20L)} per 20 L → ÷ 20 × ${d.rule.litresPerDay} L = ` +
+      `${fmtX(d.rawPerDay, 2)} → ${fmt(d.roundedPerDay)}` +
+      (d.clamped === "min" ? ` → raised to the ${fmt(d.rule.minPerDay)} minimum.` : d.clamped === "max" ? ` → capped at ${fmt(d.rule.maxPerDay)}.` : "."));
+    if (d.ignored.length) {
+      note.append(el("br"), `Not counted (published after the closing day): ${d.ignored.map((t) => `${shortDay(t.date)} · ${fmt(t.unl95)}`).join(", ")}.`);
+    }
+    if (d.provisional) {
+      note.append(el("br"), el("span", { class: "warn", text: `The ${shortDay(d.closing)} closing day hasn't come yet — today's price is held for now and the figure will update when new prices come out.` }));
+    }
+    if (d.actual && d.actual.ratePerDay !== d.ratePerDay) {
+      note.append(el("br"), `Usual method (every price counted${d.actual.complete ? "" : `, to ${shortDay(d.actual.to)}`}): ${fmt(d.actual.ratePerDay)} L.L. / day.`);
+    }
+  }
+
+  $("closeMonth").addEventListener("change", (e) => loadClose(e.target.value));
+  let closeT = null;
+  $("closeDay").addEventListener("input", (e) => {
+    const v = e.target.value.trim();
+    const ok = /^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 31;
+    e.target.setAttribute("aria-invalid", String(!ok));
+    if (!ok) return;
+    state.close.day = Number(v);
+    try { localStorage.setItem("closingDay", v); } catch { /* storage off */ }
+    clearTimeout(closeT);
+    closeT = setTimeout(() => loadClose(), 250);
+  });
+  $("closeDay").addEventListener("blur", () => renderClose());
+  document.querySelector(".close-chips").addEventListener("click", (e) => {
+    const c = e.target.closest(".chip");
+    if (!c) return;
+    state.close.day = Number(c.dataset.day);
+    $("closeDay").value = c.dataset.day;
+    try { localStorage.setItem("closingDay", c.dataset.day); } catch { /* storage off */ }
+    loadClose();
+  });
+
+  /* =====================================================================
      Fuel Price History → Excel (.xlsx), with a date range
      A tiny hand-made .xlsx (zip of XML files) — no library needed.
      ===================================================================== */
@@ -728,7 +836,7 @@
       msg = body.status === "updated" ? "New prices recorded"
         : body.status === "failed" ? "IPT unreachable"
         : "Already up to date";
-      await Promise.all([load({ fresh: true }), reloadOct()]);
+      await Promise.all([load({ fresh: true }), reloadOct(), reloadClose()]);
     } catch { msg = "Couldn't update"; }
     btn.disabled = false; btn.classList.remove("spin"); text.textContent = msg;
     clearTimeout(resetTimer);
@@ -752,7 +860,7 @@
   // and an open page asks again every 5 minutes (and when you come back to the tab).
   function autoRefresh() {
     if (document.visibilityState !== "visible") return;
-    load(); reloadOct();
+    load(); reloadOct(); reloadClose();
   }
   setInterval(autoRefresh, 5 * 60 * 1000);
   document.addEventListener("visibilitychange", () => {
@@ -761,4 +869,5 @@
 
   load();
   loadOct();
+  loadClose();
 })();
