@@ -33,7 +33,13 @@ Days before it, from **1 Oct**, stay at **450,000**; days from it use the fuel r
 (rate kept between 500K and 800K). Sundays are excluded and a pay month is capped at 26 days (the extra day comes off the last period); days can be edited.
 `GET /api/period?from=2026-10-09`. Example: from 9 Oct → 6 prices → 684,000/day; 7×450,000 + 19×684,000 = 16,146,000 (26 days).
 
-The Fuel Price History table has an **Export to Excel** panel beside it (date range → .xlsx).
+The Fuel Price History table has a **Year** filter and an **Export to Excel** panel beside it (date range → .xlsx).
+
+## Closing-day calculator ("Choose when you close for fuel")
+
+Under the breakdown: pick the month and the payroll closing day. Days up to the closing day use the
+official price in force each day; every day after it uses the closing-day price, even if a new table
+comes out later. A bar shows the split, and the result is compared with the usual method. `GET /api/closing?month=2026-11&day=24`.
 
 ## Run it
 
@@ -66,14 +72,17 @@ Tables are created automatically on first request.
 - **Update from IPT** button = read it now (max once a minute).
 - Vercel also runs `/api/refresh` once a day (cron, free-plan limit). Docker re-reads every 30 min.
 - If IPT is unreachable the last saved prices are used and the badge says **Saved** instead of **Live**.
-- History before today is seeded in `lib/history.js` (Jun 29 → Oct 30, 2026, from your project).
+- History before today is seeded in `lib/history.js` (Jun 29 → Nov 24, 2026) and, further back,
+  in `lib/history-archive.js` (Jan 2018 → Jun 2026: a selection of published Ministry tables, one or
+  more most months, each with its source article). The archive only feeds the history table, chart and
+  Excel export — the allowance maths uses tables from Oct 2026 on, so it never changes a rate.
 
 ## Files
 
 ```
 public/        index.html · style.css · app.js          the website
 api/           summary · prices · rate · refresh · health   Vercel functions
-lib/           rules (the maths) · ipt (reads IPT) · history · db · service · http
+lib/           rules (the maths) · ipt (reads IPT) · history · history-archive · db · service · http
 server.js      Docker/local server — serves public/ and the same api/ files
 db/schema.sql  tables for docker-compose
 test/          rule, parser, API and PostgreSQL tests

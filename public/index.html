@@ -7,7 +7,7 @@
   <meta name="description" content="Official IPT fuel prices in Lebanon and the fuel-indexed transportation allowance, month by month.">
   <meta name="theme-color" content="#0f2a4d">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=7">
+  <link rel="stylesheet" href="/style.css?v=8">
 </head>
 <body>
   <!-- ================= header ================= -->
@@ -172,38 +172,55 @@
             </div>
             <p class="compare muted small" id="oldLine"></p>
 
-            <!-- closing-day calculator (fills the space under the breakdown) -->
-            <div class="close-calc" id="closeCalc" aria-labelledby="h-close">
-              <div class="close-head">
-                <h4 id="h-close"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M14 14.5l1.8 1.8 3-3.3"/></svg>Closing Day Calculator</h4>
-                <span class="badge blue" id="closeBadge">—</span>
+            <!-- closing-day calculator — its own section, same level as "Daily Fuel Prices and Average in a Month" -->
+            <section class="close-calc" id="closeCalc" aria-labelledby="h-close">
+              <div class="close-hero">
+                <span class="close-hero-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4.2"/></svg></span>
+                <div class="close-hero-text">
+                  <p class="close-eyebrow">Closing Day Calculator <span class="close-new">New</span></p>
+                  <h3 id="h-close">Choose when you close for fuel</h3>
+                  <p class="close-sub">Pick your payroll closing day and we'll calculate your new monthly average.</p>
+                </div>
+                <span class="badge blue close-badge" id="closeBadge">—</span>
               </div>
-              <p class="muted small close-intro">For companies that close payroll before the end of the month: the price in force on the closing day is used for every day after it, even if a new price comes out later.</p>
 
               <div class="close-controls">
-                <label>Month
+                <label class="close-step"><span class="step-n" aria-hidden="true">1</span><span class="step-l">Month</span>
                   <select class="date-input" id="closeMonth" aria-label="Month"></select></label>
-                <label>Closing day
+                <label class="close-step"><span class="step-n" aria-hidden="true">2</span><span class="step-l">Closing day</span>
                   <select class="date-input" id="closeDay" aria-label="Closing day of the month"></select></label>
               </div>
               <p class="oct-err small" id="closeErr" hidden></p>
 
+              <!-- the month at a glance: daily prices up to the closing day, then the closing-day price carried -->
+              <div class="close-bar-wrap" aria-hidden="true">
+                <div class="close-bar" id="closeBar"></div>
+                <div class="close-bar-labels"><span id="closeBarStart">—</span><span id="closeBarEnd">—</span></div>
+              </div>
+              <ul class="close-legend small">
+                <li><i class="lg-known"></i>Official price each day</li>
+                <li><i class="lg-carried"></i>Closing-day price carried to month end</li>
+              </ul>
+
               <div class="close-result" aria-live="polite">
-                <div>
-                  <span class="small">Daily transportation allowance</span>
+                <div class="close-main">
+                  <span class="small">Your new daily transportation allowance</span>
                   <b><span id="closeRate">—</span> <small>L.L.</small></b>
+                  <span class="close-vs small" id="closeVs"></span>
                 </div>
                 <div class="close-avg">
-                  <span class="small">Month's average · UNL 95 / 20 L</span>
+                  <span class="small">New month's average · UNL 95 / 20 L</span>
                   <b><span id="closeAvg">—</span> <small>L.L.</small></b>
                 </div>
               </div>
+
+              <p class="muted small close-intro">For companies that close payroll before the end of the month: the price in force on the closing day is used for every day after it, even if a new price comes out later.</p>
 
               <button class="xl-btn close-xl" id="closeXl" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>
                 Download as Excel
               </button>
-            </div>
+            </section>
 
           </section>
         </div>
@@ -283,9 +300,13 @@
     <!-- ================= reports ================= -->
     <div class="reports">
       <section class="card panel" id="history" aria-labelledby="h-history">
-        <div class="panel-head">
-          <h3 id="h-history"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Fuel Price History</h3>
-          <p class="muted small">Official tables by the date they took effect · L.L. per 20 L (LPG per 10 kg).</p>
+        <div class="panel-head row hist-head">
+          <div>
+            <h3 id="h-history"><svg class="h-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>Fuel Price History <span class="muted small" id="histSpan"></span></h3>
+            <p class="muted small">Official tables by the date they took effect · L.L. per 20 L (LPG per 10 kg). Before 29 Jun 2026: a selection of published tables (one or more most months).</p>
+          </div>
+          <label class="hist-year"><span>Year</span>
+            <select class="date-input" id="histYear" aria-label="Show prices from year"></select></label>
         </div>
         <div class="history-body">
           <div class="table-wrap scroll">
@@ -306,6 +327,7 @@
             </div>
             <div class="xl-presets" role="group" aria-label="Quick ranges">
               <button type="button" class="chip" data-range="all">All</button>
+              <button type="button" class="chip" data-range="year">This year</button>
               <button type="button" class="chip" data-range="month">This month</button>
               <button type="button" class="chip" data-range="30">Last 30 days</button>
             </div>
@@ -368,7 +390,7 @@
   </div>
 
   <noscript><p class="wrap">This page needs JavaScript to calculate.</p></noscript>
-  <script src="/app.js?v=10" defer></script>
+  <script src="/app.js?v=11" defer></script>
   <script src="/promo.js?v=4" defer></script>
 </body>
 </html>

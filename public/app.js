@@ -392,7 +392,23 @@
   function renderHistory() {
     const body = $("historyBody");
     clear(body);
-    const h = state.data.history || [];
+    const all = state.data.history || [];
+
+    // year picker: newest first; remembers the choice while the page is open
+    const ysel = $("histYear");
+    const years = [...new Set(all.map((t) => t.date.slice(0, 4)))].sort().reverse();
+    const ysig = years.join();
+    if (ysel.dataset.sig !== ysig) {
+      const keep = ysel.value;
+      ysel.dataset.sig = ysig;
+      clear(ysel);
+      ysel.append(el("option", { value: "", text: "All years" }));
+      for (const y of years) ysel.append(el("option", { value: y, text: y }));
+      ysel.value = years.includes(keep) || keep === "" ? keep : "";
+    }
+    const year = ysel.value;
+    if (all.length) $("histSpan").textContent = `(${all[0].date.slice(0, 4)} – ${all[all.length - 1].date.slice(0, 4)})`;
+    const h = all;
     const cell = (v, prev) => {
       const td = el("td", { class: "num", text: v != null ? fmt(v) : "—" });
       if (v != null && prev != null && v !== prev) td.append(el("span", { class: `chg ${v > prev ? "up" : "down"}`, text: signed(v - prev) }));
@@ -400,6 +416,7 @@
     };
     for (let i = h.length - 1; i >= 0; i--) {
       const t = h[i], pv = h[i - 1] || {};
+      if (year && t.date.slice(0, 4) !== year) continue;
       body.append(el("tr", {},
         el("td", { text: dayLabel(t.date) }),
         cell(t.unl95, pv.unl95), cell(t.unl98, pv.unl98), cell(t.diesel, pv.diesel), cell(t.lpg, pv.lpg)));
@@ -595,9 +612,50 @@
     $("closeBadge").textContent = d.provisional ? "provisional" : `closes ${shortDay(d.closing)}`;
     $("closeRate").textContent = fmt(d.ratePerDay);
     $("closeAvg").textContent = fmtX(d.avgQuote20L);
+
+    // vs. the usual method (every table counts)
+    const vs = $("closeVs");
+    vs.className = "close-vs small";
+    if (d.actual && d.actual.ratePerDay != null) {
+      const diff = d.ratePerDay - d.actual.ratePerDay;
+      vs.textContent = diff === 0
+        ? `Same as without a closing day (${fmt(d.actual.ratePerDay)})`
+        : `${signed(diff)} vs. without a closing day (${fmt(d.actual.ratePerDay)})`;
+      if (diff) vs.classList.add(diff > 0 ? "up" : "down");
+    } else vs.textContent = "";
+
+    renderCloseBar(d);
+  }
+
+  /* the month as one bar: each price segment sized by its days; the carried part hatched */
+  function renderCloseBar(d) {
+    const bar = $("closeBar");
+    clear(bar);
+    const segs = d.segments || [];
+    const total = d.daysInMonth || segs.reduce((a, x) => a + x.days, 0) || 1;
+    segs.forEach((sg, i) => {
+      const w = (sg.days / total) * 100;
+      const cls = sg.carried ? "seg carried" : `seg known${i % 2 ? " alt" : ""}`;
+      const tip = sg.carried
+        ? `${rangeLabel(sg.from, sg.to)} · ${fmt(sg.unl95)} (closing-day price)`
+        : `${rangeLabel(sg.from, sg.to)} · ${fmt(sg.unl95)}`;
+      const seg = el("span", { class: cls, title: tip }, w >= 14 ? el("em", { text: `${sg.days}d` }) : null);
+      seg.style.width = `${w}%`;            // CSSOM, not a style="" attribute (the CSP forbids those)
+      bar.append(seg);
+    });
+    if (!d.provisional && d.closingDay < d.daysInMonth) {
+      const pct = (d.closingDay / total) * 100;
+      const pin = el("span", { class: `close-pin${pct > 70 ? " right" : pct < 30 ? " left" : ""}` },
+        el("b", { text: `Closes ${shortDay(d.closing)}` }));
+      pin.style.left = `${pct}%`;
+      bar.append(pin);
+    }
+    $("closeBarStart").textContent = shortDay(d.first);
+    $("closeBarEnd").textContent = shortDay(d.end);
   }
 
   $("closeMonth").addEventListener("change", (e) => loadClose(e.target.value));
+  $("histYear").addEventListener("change", () => { renderHistory(); const w = $("historyBody").closest(".table-wrap"); if (w) w.scrollTop = 0; });
   $("closeDay").addEventListener("change", (e) => {
     state.close.day = Number(e.target.value);
     try { localStorage.setItem("closingDay", e.target.value); } catch { /* storage off */ }
@@ -734,6 +792,7 @@
     if (!h.length) return null;
     const last = h[h.length - 1].date, first = h[0].date, today = isoToday();
     if (kind === "all") return [first, last];
+    if (kind === "year") { const y = today.slice(0, 4); return [`${y}-01-01` < first ? first : `${y}-01-01`, last]; }
     if (kind === "month") { const m = today.slice(0, 7); return [`${m}-01` < first ? first : `${m}-01`, last]; }
     if (kind === "30") { const a = addDaysIso(today, -29); return [a < first ? first : a, last]; }
     return null;
