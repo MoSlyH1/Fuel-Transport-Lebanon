@@ -9,6 +9,8 @@
   const $ = (id) => document.getElementById(id);
   const nf = new Intl.NumberFormat("en-US");
   const fmt = (n) => nf.format(Math.round(n));
+  // exact figures (averages): up to `d` decimals, e.g. 2,757,677.419
+  const fmtX = (n, d = 3) => new Intl.NumberFormat("en-US", { maximumFractionDigits: d }).format(n);
   const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const signed = (n) => (n < 0 ? "−" : "+") + fmt(Math.abs(n));
@@ -210,16 +212,19 @@
       return;
     }
     body.append(
-      drow(`Average price per ${rule.litresPerQuote} L (${rule.fuel})`, `${fmt(r.avgQuote20L)} L.L.`,
+      drow(`Average price per ${rule.litresPerQuote} L (${rule.fuel})`, `${fmtX(r.avgQuote20L)} L.L.`,
         `${fmt(r.sumQuotes)} ÷ ${r.avgDays} day${r.avgDays === 1 ? "" : "s"} (Sat & Sun included)`),
-      drow(`Average price per litre`, `${fmt(r.avgPerLitre)} L.L.`,
-        `${fmt(r.avgQuote20L)} ÷ ${rule.litresPerQuote}`),
+      drow(`Average price per litre`, `${fmtX(r.avgPerLitre, 2)} L.L.`,
+        `${fmtX(r.avgQuote20L)} ÷ ${rule.litresPerQuote}`),
       drow("Daily consumption", `${rule.litresPerDay} litres`),
-      drow("Daily amount", `${fmt(r.rawPerDay)} L.L.`, `${rule.litresPerDay} × ${fmt(r.avgPerLitre)}`),
+      drow("Daily amount", `${fmtX(r.rawPerDay, 2)} L.L.`, `${rule.litresPerDay} × ${fmtX(r.avgPerLitre, 2)}`),
       drow(`Rounded to the nearest thousand`, `${fmt(r.roundedPerDay)} L.L.`, "after multiplying by 5"));
     if (r.clamped) {
       body.append(drow(r.clamped === "min" ? "Raised to the minimum" : "Capped at the maximum",
         `${signed(r.fuelRatePerDay - r.roundedPerDay)} L.L.`));
+    }
+    if (r.official != null) {
+      body.append(drow("Official rate (government)", `${fmt(r.official)} L.L.`, `published for ${r.label}`));
     }
     body.append(drow("Final daily rate", `${fmt(r.fuelRatePerDay)} L.L.`, null, true));
     $("rateSub").textContent =
@@ -448,7 +453,7 @@
       ["Transport Lebanon — transportation allowance"],
       ["Payroll period", r.label],
       ["Fuel", rule.fuel], ["Litres per day", rule.litresPerDay],
-      ["Average price / 20 L", r.avgQuote20L ?? ""], ["Daily rate (L.L.)", r.ratePerDay],
+      ["Average price / 20 L", r.avgQuote20L != null ? Number(r.avgQuote20L.toFixed(3)) : ""], ["Daily rate (L.L.)", r.ratePerDay],
       ["Employees", emp], [],
       ["Period", "Days worked", "Daily rate", "Total (per employee)"],
     ];
@@ -526,8 +531,8 @@
         el("td", { class: "num", text: String(sg.days ?? "—") }),
         el("td", { class: "num " + (diff == null ? "" : diff > 0 ? "up" : diff < 0 ? "down" : ""), text: diff == null ? "—" : diff === 0 ? "0" : (diff > 0 ? "+" : "−") + fmt(Math.abs(diff)) })));
     }
-    $("octAvgQuote").textContent = fmt(Math.round(d.avgQuote20L));
-    $("octNote").textContent = `${fmt(d.sumQuotes)} ÷ ${d.avgDays} days = ${fmt(Math.round(d.avgQuote20L))} per 20 L. ` +
+    $("octAvgQuote").textContent = fmtX(d.avgQuote20L);
+    $("octNote").textContent = `${fmt(d.sumQuotes)} ÷ ${d.avgDays} days = ${fmtX(d.avgQuote20L)} per 20 L. ` +
       "Each price counts for every day it stayed in force, Saturdays and Sundays included. New prices appear here as soon as they come out.";
     // the daily transportation allowance (October only)
     const al = $("octAllowance");
