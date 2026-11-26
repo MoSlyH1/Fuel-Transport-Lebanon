@@ -7,7 +7,7 @@
   <meta name="description" content="Official IPT fuel prices in Lebanon and the fuel-indexed transportation allowance, month by month.">
   <meta name="theme-color" content="#0f2a4d">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/style.css?v=6">
+  <link rel="stylesheet" href="/style.css?v=7">
 </head>
 <body>
   <!-- ================= header ================= -->
@@ -183,11 +183,9 @@
               <div class="close-controls">
                 <label>Month
                   <select class="date-input" id="closeMonth" aria-label="Month"></select></label>
-                <label><span>Closing day <span class="muted" id="closeDayMax">(1–30)</span></span>
-                  <input class="date-input" id="closeDay" type="number" inputmode="numeric" min="1" max="31" step="1" value="24" aria-label="Closing day of the month"></label>
+                <label>Closing day
+                  <select class="date-input" id="closeDay" aria-label="Closing day of the month"></select></label>
               </div>
-              <p class="close-pick-label small" id="closePickLabel">Tap the day the company closes — any day of the month:</p>
-              <div class="close-days" id="closeDayGrid" role="group" aria-labelledby="closePickLabel"></div>
               <p class="oct-err small" id="closeErr" hidden></p>
 
               <div class="close-result" aria-live="polite">
@@ -201,14 +199,6 @@
                 </div>
               </div>
 
-              <div class="table-wrap">
-                <table class="grid oct-grid close-grid">
-                  <thead><tr><th>Period</th><th class="num">UNL 95</th><th class="num">Days</th></tr></thead>
-                  <tbody id="closeBody"></tbody>
-                  <tfoot><tr><th>Total</th><th class="num" id="closeSum">—</th><th class="num" id="closeDays">—</th></tr></tfoot>
-                </table>
-              </div>
-              <p class="muted small close-note" id="closeNote"></p>
               <button class="xl-btn close-xl" id="closeXl" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14"/></svg>
                 Download as Excel
@@ -378,7 +368,7 @@
   </div>
 
   <noscript><p class="wrap">This page needs JavaScript to calculate.</p></noscript>
-  <script src="/app.js?v=9" defer></script>
+  <script src="/app.js?v=10" defer></script>
   <script src="/promo.js?v=4" defer></script>
 </body>
 </html>

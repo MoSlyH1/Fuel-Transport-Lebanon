@@ -415,18 +415,8 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .close-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .close-head h4 { margin: 0; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
 .close-intro { margin: 0 0 10px; }
-.close-controls { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 10px; margin-bottom: 8px; }
+.close-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 10px; }
 .close-controls label { display: grid; gap: 4px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
-.close-pick-label { margin: 0 0 6px; color: var(--ink-2); font-weight: 600; }
-.close-days { display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 5px; margin-bottom: 12px; }
-.close-days .day {
-  border: 1px solid var(--line); background: var(--card); color: var(--ink-2); border-radius: 8px;
-  font: 600 12.5px var(--sans); padding: 7px 0; cursor: pointer; text-align: center;
-}
-.close-days .day:hover { border-color: var(--blue); color: var(--blue); }
-.close-days .day.future { border-style: dashed; color: var(--muted); }
-.close-days .day[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; border-style: solid; }
-.close-days .day:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .close-result {
   display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 10px;
   background: var(--blue-soft); border: 1px solid var(--blue-line); border-radius: 10px; padding: 12px 14px;
@@ -435,12 +425,6 @@ label.tile:focus-within { border-color: var(--blue); box-shadow: 0 0 0 3px var(-
 .close-result b { font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: var(--blue); white-space: nowrap; }
 .close-result .close-avg b { font-size: 16px; color: var(--ink); }
 .close-result small { font-size: 12px; font-weight: 600; letter-spacing: 0; }
-.close-grid tbody tr.locked td { background: var(--blue-soft); }
-.close-grid tbody tr.locked .sub { color: var(--blue); }
-.close-grid tfoot th { font-size: 12.5px; }
-.close-grid th, .close-grid td { padding: 6px 10px; }
-.close-note { margin: 8px 0 0; line-height: 1.5; }
-.close-note .warn { color: var(--red); }
 .close-xl { margin-top: 12px; width: 100%; }
 
 /* ===== reports ===== */

@@ -551,7 +551,6 @@
      ===================================================================== */
   state.close = { month: null, day: 24, data: null, seq: 0 };
   try { const d = Number(localStorage.getItem("closingDay")); if (d >= 1 && d <= 31) state.close.day = d; } catch { /* storage off */ }
-  $("closeDay").value = String(state.close.day);
 
   async function loadClose(month = state.close.month, day = state.close.day) {
     const my = ++state.close.seq;
@@ -585,78 +584,23 @@
       for (const x of d.months) sel.append(el("option", { value: x.month, text: x.label }));
     }
     sel.value = d.month;
-    const dayIn = $("closeDay");
-    dayIn.max = String(d.daysInMonth);
-    dayIn.removeAttribute("aria-invalid");
-    if (document.activeElement !== dayIn) dayIn.value = String(d.closingDay);
-    $("closeDayMax").textContent = `(1–${d.daysInMonth})`;
-    const grid = $("closeDayGrid");
-    if (grid.dataset.n !== String(d.daysInMonth)) {            // build the 1…N buttons once per month length
-      grid.dataset.n = String(d.daysInMonth);
-      clear(grid);
-      for (let n = 1; n <= d.daysInMonth; n++) grid.append(el("button", { type: "button", class: "day", "data-day": String(n), text: String(n) }));
+    const daySel = $("closeDay");
+    if (daySel.dataset.m !== d.month) {                        // one option per day of this month
+      daySel.dataset.m = d.month;
+      clear(daySel);
+      const mon = MON[Number(d.month.slice(5)) - 1];
+      for (let n = 1; n <= d.daysInMonth; n++) daySel.append(el("option", { value: String(n), text: `${n} ${mon}` }));
     }
-    const todayDay = d.today.slice(0, 7) === d.month ? Number(d.today.slice(8)) : d.today > d.end ? 99 : 0;
-    for (const b of grid.children) {
-      const n = Number(b.dataset.day);
-      b.setAttribute("aria-pressed", String(n === d.closingDay));
-      b.classList.toggle("future", n > todayDay);                 // not reached yet → provisional
-      b.title = n > todayDay ? `${n} ${MON[Number(d.month.slice(5)) - 1]} — not reached yet (provisional)` : `${n} ${MON[Number(d.month.slice(5)) - 1]}`;
-    }
+    daySel.value = String(d.closingDay);
     $("closeBadge").textContent = d.provisional ? "provisional" : `closes ${shortDay(d.closing)}`;
     $("closeRate").textContent = fmt(d.ratePerDay);
     $("closeAvg").textContent = fmtX(d.avgQuote20L);
-
-    const tb = $("closeBody");
-    clear(tb);
-    for (const sg of d.segments) {
-      const when = sg.from === sg.to ? shortDay(sg.from) : `${shortDay(sg.from)} → ${shortDay(sg.to)}`;
-      const sub = sg.carried
-        ? (d.provisional ? `today's price (${shortDay(sg.tableDate)}) held` : `closing-day price held`)
-        : `price of ${shortDay(sg.tableDate)}`;
-      tb.append(el("tr", { class: sg.carried ? "locked" : "" },
-        el("td", {}, el("span", { class: "per", text: when }), el("div", { class: "sub muted small", text: sub })),
-        el("td", { class: "num", text: fmt(sg.unl95) }),
-        el("td", { class: "num", text: String(sg.days) })));
-    }
-    $("closeSum").textContent = fmt(d.sumQuotes);
-    $("closeDays").textContent = String(d.avgDays);
-
-    const note = $("closeNote");
-    clear(note);
-    note.append(`${fmt(d.sumQuotes)} ÷ ${d.avgDays} days = ${fmtX(d.avgQuote20L)} per 20 L → ÷ 20 × ${d.rule.litresPerDay} L = ` +
-      `${fmtX(d.rawPerDay, 2)} → ${fmt(d.roundedPerDay)}` +
-      (d.clamped === "min" ? ` → raised to the ${fmt(d.rule.minPerDay)} minimum.` : d.clamped === "max" ? ` → capped at ${fmt(d.rule.maxPerDay)}.` : "."));
-    if (d.ignored.length) {
-      note.append(el("br"), `Not counted (published after the closing day): ${d.ignored.map((t) => `${shortDay(t.date)} · ${fmt(t.unl95)}`).join(", ")}.`);
-    }
-    if (d.provisional) {
-      note.append(el("br"), el("span", { class: "warn", text: `The ${shortDay(d.closing)} closing day hasn't come yet — today's price is held for now and the figure will update when new prices come out.` }));
-    }
-    if (d.actual && d.actual.ratePerDay !== d.ratePerDay) {
-      note.append(el("br"), `Usual method (every price counted${d.actual.complete ? "" : `, to ${shortDay(d.actual.to)}`}): ${fmt(d.actual.ratePerDay)} L.L. / day.`);
-    }
   }
 
   $("closeMonth").addEventListener("change", (e) => loadClose(e.target.value));
-  let closeT = null;
-  $("closeDay").addEventListener("input", (e) => {
-    const v = e.target.value.trim();
-    const ok = /^\d{1,2}$/.test(v) && Number(v) >= 1 && Number(v) <= 31;
-    e.target.setAttribute("aria-invalid", String(!ok));
-    if (!ok) return;
-    state.close.day = Number(v);
-    try { localStorage.setItem("closingDay", v); } catch { /* storage off */ }
-    clearTimeout(closeT);
-    closeT = setTimeout(() => loadClose(), 250);
-  });
-  $("closeDay").addEventListener("blur", () => renderClose());
-  $("closeDayGrid").addEventListener("click", (e) => {
-    const b = e.target.closest(".day");
-    if (!b) return;
-    state.close.day = Number(b.dataset.day);
-    $("closeDay").value = b.dataset.day;
-    try { localStorage.setItem("closingDay", b.dataset.day); } catch { /* storage off */ }
+  $("closeDay").addEventListener("change", (e) => {
+    state.close.day = Number(e.target.value);
+    try { localStorage.setItem("closingDay", e.target.value); } catch { /* storage off */ }
     loadClose();
   });
 
